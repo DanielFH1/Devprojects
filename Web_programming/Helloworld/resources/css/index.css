@@ -1,0 +1,11 @@
+.banner{
+    background-color: lightgreen;
+    color: brown;
+    text-align: center;
+    margin-top: 50px;
+}
+
+#jimage{
+    margin-bottom: 20px;
+    padding: 20px 0;
+}

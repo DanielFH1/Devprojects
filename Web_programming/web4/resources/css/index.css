@@ -1,0 +1,78 @@
+body{
+    margin: 0 23%;
+}
+
+.container{
+    border: 2px solid gray;
+    margin: 10px auto;
+    padding: 10px 10px;
+    width: 1000px;
+}
+
+.colorpanel{
+    display: inline-block;
+    width: 30%;
+    margin: 20px auto;
+    height: 100px;
+    text-align: center;
+}
+
+.ivory{
+    background-color: #fffff0;
+    color: black;
+}
+
+.skyblue{
+    background-color: skyblue;
+}
+
+.purple{
+    background-color: purple;
+    color: white;
+}
+
+.paleblue{
+    background-color: #8aabaa;
+}
+
+.font-label{
+    text-decoration: underline;
+}
+
+.thin{
+    font-weight: 100;
+}
+
+.light{
+    font-weight: 300;
+}
+
+.medium{
+    font-weight: 500;
+}
+
+.regular{
+    font-weight: 400;
+}
+
+.semibold{
+    font-weight: 600;
+}
+.bold{
+    font-weight: 700;
+}
+
+.roboto{
+    font-family: "Roboto";
+}
+
+.opensans{
+    font-family: "Open Sans";
+}
+
+.notoserif{
+    font-family: "Noto Serif";
+}
+.italic{
+    font-style:italic;
+}
