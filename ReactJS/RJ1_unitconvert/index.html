@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <div id="root"></div>
+  </body>
+  <script src="https://unpkg.com/react@17.0.2/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17.0.2/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const root = document.getElementById("root");
+
+    function MinutesToHours() {
+      const [amount, setAmount] = React.useState("");
+      const [flipped, setFlipped] = React.useState(false);
+
+      const onChange = (event) => {
+        setAmount(event.target.value);
+      };
+      const reset = () => {
+        setAmount(0);
+      };
+      // const onFlip = () => setFlipped(!flipped); //flipped가 true면 false로, vice versa
+      const onFlip = () => setFlipped((current) => !current);
+
+      return (
+        <div>
+          <div>
+            <label htmlFor="minutes">Minutes</label>
+            <input
+              value={flipped ? amount * 60 : amount}
+              id="minutes"
+              placeholder="Minutes"
+              type="number"
+              onChange={onChange} // 얘가 있어야 입력가능
+              // disabled = {flipped === true} // IF, flipped가 true면 바뀐 상태니까 minutes는 disabled
+              disabled={flipped}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="hours">Hours</label>
+            <input
+              value={flipped ? amount : Math.round(amount / 60)} //
+              id="hours"
+              placeholder="Hours"
+              type="number"
+              disabled={!flipped} // IF, flipped가 디폴트인 false면, hours는 disabled(쓸수 없다는거)
+              onChange={onChange}
+            />
+          </div>
+
+          <button onClick={reset}>Reset</button>
+          <button onClick={onFlip}>Flip</button>
+        </div>
+      );
+    }
+
+    function KmToMiles() {
+      const [amount, setAmount] = React.useState("");
+      const [flipped, setFlipped] = React.useState(false);
+
+      const onChange = (event) => {
+        setAmount(event.target.value);
+      };
+
+      const reset = () => {
+        setAmount(0);
+      };
+
+      const onFlip = () => setFlipped((current) => !current);
+
+      return ( // miles -> km : amount*1.609 , km -> miles : amount*0.621371
+        <div>
+          <div>
+            <label htmlFor="km">Km</label>
+            <input
+              value={flipped ? Math.round(amount * 1.609) : amount}
+              id="km"
+              placeholder="Km"
+              type="number"
+              onChange={onChange}
+              disabled={flipped}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="miles">miles</label>
+            <input 
+              value={flipped ? amount : Math.round(amount* 0.621371)}
+              type="number"
+              id="miles"
+              placeholder="miles"
+              disabled={!flipped}
+              onChange={onChange}
+              />
+            </div>
+
+            <button onClick={reset}>Reset</button>
+            <button onClick={onFlip}>Flip</button>
+
+
+        </div>
+      );
+    }
+
+    function App() {
+      // select는 그냥 html문법
+      const [index, setIndex] = React.useState(0);
+      const onSelect = (event) => {
+        setIndex(event.target.value);
+      };
+      return (
+        <div>
+          <h1>Super Converter</h1>
+          <select value={index} onChange={onSelect}>
+            <option value="0">Minutes to Hours</option>
+            <option value="1">Km to Miles</option>
+          </select>
+          {index === "0" ? <MinutesToHours /> : null}
+          {index === "1" ? <KmToMiles /> : null}
+        </div>
+      );
+    }
+    ReactDOM.render(<App />, root); // 사용자에게 보여줘라 , (element, 어디에 둘건지)
+  </script>
+</html>
