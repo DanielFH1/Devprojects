@@ -1,13 +1,10 @@
-import 'dart:convert'; //json 인코딩,디코딩
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:google_fonts/google_fonts.dart'; // Google Fonts 추가
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:convert';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env"); // 상대 경로로 수정
-
   runApp(MyApp());
 }
 
@@ -17,7 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: "랜덤명언",
+      title: "Random Quote",
       theme: ThemeData(
         primarySwatch: Colors.blue,
         brightness: Brightness.light,
@@ -84,7 +81,10 @@ class _HomePageState extends State<HomePage>
         curve: Curves.easeIn,
       ),
     );
-    _fetchRandomQuote();
+    // 초기화 시 명언 가져오기
+    Future.delayed(Duration(milliseconds: 300), () {
+      _fetchRandomQuote();
+    });
   }
 
   @override
@@ -98,52 +98,101 @@ class _HomePageState extends State<HomePage>
       _isLoading = true;
     });
 
-    final Uri url = Uri.parse("https://api.api-ninjas.com/v1/quotes");
-
     try {
-      final String? apiKey = dotenv.env['API_NINJAS_KEY'];
-      if (apiKey == null || apiKey.isEmpty) {
-        setState(() {
-          _quote = "API 키가 설정되어 있지 않습니다.";
-          _author = "";
-          _isLoading = false;
-        });
-        return;
-      }
+      // ZenQuotes API 사용
       final response = await http.get(
-        url,
-        headers: {'X-Api-Key': apiKey},
-      );
+        Uri.parse('https://zenquotes.io/api/random'),
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'User-Agent': 'RandomQuoteApp/1.0',
+          'Accept': 'application/json',
+        },
+      ).timeout(Duration(seconds: 10)); // 타임아웃 설정
+
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final jsonResponse = jsonDecode(response.body);
-        if (jsonResponse is List && jsonResponse.isNotEmpty) {
-          final String content = jsonResponse[0]['quote'];
-          final String author = jsonResponse[0]['author'];
+        // 응답이 비어있는지 확인
+        if (response.body.isEmpty) {
           setState(() {
-            _quote = content;
-            _author = author;
+            _quote = "서버에서 빈 응답이 반환되었습니다.";
+            _author = "";
             _isLoading = false;
           });
+          return;
+        }
+
+        try {
+          // ZenQuotes는 배열 형태로 반환됨
+          final List<dynamic> dataList = jsonDecode(response.body);
+
+          if (dataList.isEmpty) {
+            setState(() {
+              _quote = "데이터가 없습니다.";
+              _author = "";
+              _isLoading = false;
+            });
+            return;
+          }
+
+          // 첫 번째 항목 사용
+          final data = dataList[0] as Map<String, dynamic>;
+
+          // 데이터 확인
+          print('Decoded data: $data');
+
+          // ZenQuotes API 형식에 맞게 필드 이름 변경
+          final content = data['q']; // ZenQuotes는 'q'를 명언 필드로 사용
+          final author = data['a']; // ZenQuotes는 'a'를 저자 필드로 사용
+
+          if (content == null) {
+            setState(() {
+              _quote = "명언 컨텐츠가 없습니다.";
+              _author = "";
+              _isLoading = false;
+            });
+            return;
+          }
+
+          setState(() {
+            _quote = content;
+            _author = author ?? "";
+            _isLoading = false;
+          });
+
+          print('Quote: $_quote');
+          print('Author: $_author');
+
           _animationController.reset();
           _animationController.forward();
-        } else {
+        } catch (decodeError) {
+          print('JSON 디코딩 오류: $decodeError');
           setState(() {
-            _quote = "명언을 불러오지 못했습니다.";
+            _quote = "데이터 형식 오류: $decodeError";
             _author = "";
             _isLoading = false;
           });
         }
+      } else if (response.statusCode == 429) {
+        // 429 에러 (Too Many Requests) 처리
+        setState(() {
+          _quote = "Too many requests. Please try again in a minute.";
+          _author = "Rate limit exceeded (429 error)";
+          _isLoading = false;
+        });
       } else {
         setState(() {
-          _quote = "명언을 불러오지 못했습니다. (에러 ${response.statusCode})";
+          _quote = "Failed to load quote. (Error ${response.statusCode})";
           _author = "";
           _isLoading = false;
         });
       }
     } catch (e) {
+      print('네트워크 오류: $e');
       setState(() {
-        _quote = "오류 발생: $e";
+        _quote = "네트워크 오류: $e";
         _author = "";
         _isLoading = false;
       });
@@ -163,7 +212,7 @@ class _HomePageState extends State<HomePage>
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                "Random Quotes",
+                "Random Quote",
                 style: GoogleFonts.roboto(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -179,7 +228,7 @@ class _HomePageState extends State<HomePage>
                   ClipPath(
                     clipper: WaveClipper(),
                     child: Container(
-                      color: colorScheme.primary.withValues(alpha: 0.7),
+                      color: colorScheme.primary.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -195,7 +244,7 @@ class _HomePageState extends State<HomePage>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    colorScheme.primary.withValues(alpha: 0.3),
+                    colorScheme.primary.withOpacity(0.3),
                     colorScheme.surface,
                   ],
                 ),
@@ -207,7 +256,7 @@ class _HomePageState extends State<HomePage>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SizedBox(height: 20),
-                    _isLoading || _fadeAnimation == null
+                    _isLoading
                         ? Center(child: CircularProgressIndicator())
                         : Card(
                             elevation: 4,
@@ -217,7 +266,8 @@ class _HomePageState extends State<HomePage>
                             child: Padding(
                               padding: const EdgeInsets.all(20.0),
                               child: FadeTransition(
-                                opacity: _fadeAnimation!,
+                                opacity: _fadeAnimation ??
+                                    AlwaysStoppedAnimation(1.0),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
@@ -252,6 +302,16 @@ class _HomePageState extends State<HomePage>
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
+                                    SizedBox(height: 10),
+                                    // 출처 표기 (필수)
+                                    Text(
+                                      "Powered by ZenQuotes.io",
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ],
                                 ),
                               ),
