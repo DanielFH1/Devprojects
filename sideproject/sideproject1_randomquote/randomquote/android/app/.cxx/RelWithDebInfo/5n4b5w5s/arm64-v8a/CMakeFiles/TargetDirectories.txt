@@ -1,0 +1,2 @@
+C:/Users/dan/Desktop/Devprojects/sideproject/sideproject1_randomquote/randomquote/android/app/.cxx/RelWithDebInfo/5n4b5w5s/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Users/dan/Desktop/Devprojects/sideproject/sideproject1_randomquote/randomquote/android/app/.cxx/RelWithDebInfo/5n4b5w5s/arm64-v8a/CMakeFiles/rebuild_cache.dir

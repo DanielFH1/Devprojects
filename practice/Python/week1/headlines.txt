@@ -1,0 +1,30 @@
+1. N8n – Flexible AI workflow automation for technical teams
+2. Accountability Sinks
+3. Why I stopped angel investing after 15 years (and what I'm doing instead)
+4. Minimum Viable Blog
+5. Show HN: Use Third Party LLM API in JetBrains AI Assistant
+6. Closures in Tcl
+7. Show HN: Pipask – safer pip without compromising convenience
+8. Speedrunning and Modding the Incredibles: Rise of the Underminer
+9. Time saved by AI offset by new work created, study suggests
+10. Seeking an Answer: Why can't HTML alone do includes?
+11. Connomore64: Cycle exact emulation of the C64 using parallel microcontrollers
+12. What New Orleans Taught Me
+13. Old Soviet Venus descent craft nearing Earth reentry
+14. 'I found your dad': The mystery of a missing climber
+15. The unusual mathematics that gives rose petals their shape
+16. Creating Bluey: Tales from the Art Director
+17. The language brain matters more for programming than the math brain? (2020)
+18. Show HN: I built a synthesizer based on 3D physics
+19. The US has approved CRISPR pigs for food
+20. I put sheet music into smart glasses [video]
+21. GitDroid: A third party Android app manager for apps uploaded to GitHub releases
+22. Depictions of the Milky Way found in ancient Egyptian imagery
+23. Google Can Train Search AI with Web Content Even with Opt-Out
+24. ePub-utils: A Python library and CLI tool for inspecting ePub from the terminal
+25. PScientists reveal how bats learn to identify which prey is safe to eat
+26. A memory of the nineteen nineties (1997)
+27. Open-source AI platform for ear-based sensing applications
+28. Expanding on what we missed with sycophancy
+29. A proof of concept tool to verify estimates
+30. What I've learned from jj

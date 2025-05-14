@@ -1,0 +1,2 @@
+C:/Users/dan/Desktop/Devprojects/sideproject/sideproject1_randomquote/randomquote/android/app/.cxx/Debug/4q5s1u4b/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/dan/Desktop/Devprojects/sideproject/sideproject1_randomquote/randomquote/android/app/.cxx/Debug/4q5s1u4b/x86_64/CMakeFiles/rebuild_cache.dir

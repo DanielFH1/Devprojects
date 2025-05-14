@@ -1,0 +1,33 @@
+h1{
+    text-align: center;
+    font-weight: bold;
+    font-size: 80px;
+    color: blanchedalmond;
+    background-color: black;
+}
+
+#simg{
+    display: block;
+    margin: auto;
+    width: 60%;
+    height: 50em;
+}
+
+thead{
+    background-color: aqua;
+}
+
+table{
+    border: 2px solid black;
+    margin-left: auto;
+    margin-right: auto;
+    width: 60%;
+}
+
+thead, td{
+    border: 1px solid black;
+}
+
+figcaption{
+    text-align: center;
+}
