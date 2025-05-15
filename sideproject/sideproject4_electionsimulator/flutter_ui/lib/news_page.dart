@@ -41,7 +41,7 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<void> fetchNewsData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:8000/news'));
+      final response = await http.get(Uri.parse('/news'));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

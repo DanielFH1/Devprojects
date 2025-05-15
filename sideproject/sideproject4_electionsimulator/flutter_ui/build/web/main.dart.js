@@ -64325,7 +64325,7 @@ tj(){var s=0,r=A.T(t.H),q=1,p=[],o=this,n,m,l,k,j,i,h,g,f
 var $async$tj=A.P(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:q=3
 s=6
-return A.W(A.aA3(A.eH("http://localhost:8000/news",0,null)),$async$tj)
+return A.W(A.aA3(A.eH("/news",0,null)),$async$tj)
 case 6:n=b
 if(n.b===200){h=n
 m=B.cF.dV(A.azO(A.axE(h.e)).dV(h.w))
