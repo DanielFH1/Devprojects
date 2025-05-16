@@ -28,6 +28,20 @@ app.add_middleware(
 )
 
 # --- API 엔드포인트 ---
+@app.get("/sitemap.xml")
+async def get_sitemap():
+    sitemap_path = FLUTTER_BUILD_DIR / "sitemap.xml"
+    if sitemap_path.exists():
+        return FileResponse(str(sitemap_path), media_type="application/xml")
+    raise HTTPException(status_code=404, detail="Sitemap not found")
+
+@app.get("/robots.txt")
+async def get_robots():
+    robots_path = FLUTTER_BUILD_DIR / "robots.txt"
+    if robots_path.exists():
+        return FileResponse(str(robots_path), media_type="text/plain")
+    raise HTTPException(status_code=404, detail="Robots.txt not found")
+
 @app.get("/news")
 def get_news_data():
     # assets 폴더에서 최신 news_summary_*.json 파일을 찾도록 수정

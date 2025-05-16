@@ -10,14 +10,15 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 
 class NewsPage extends StatefulWidget {
-  final VoidCallback? onToggleTheme;
-  final ThemeMode? themeMode;
-  final VoidCallback? onNavigatePrediction;
+  final VoidCallback onToggleTheme;
+  final ThemeMode themeMode;
+  final VoidCallback onNavigatePrediction;
+
   const NewsPage({
     super.key,
-    this.onToggleTheme,
-    this.themeMode,
-    this.onNavigatePrediction,
+    required this.onToggleTheme,
+    required this.themeMode,
+    required this.onNavigatePrediction,
   });
 
   @override
@@ -106,6 +107,86 @@ class _NewsPageState extends State<NewsPage> {
         .toList();
   }
 
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, size: 24),
+              SizedBox(width: 8),
+              Text('대선 예측 시뮬레이터 소개'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '대선 예측 시뮬레이터는 21대 대선 정보에 대한 접근성을 높이고, 시민들이 정치 정보를 더 쉽게 이해하고 분석할 수 있도록 돕기 위해 제작되었습니다.',
+                style: TextStyle(fontSize: 16, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '주요 기능:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              _buildFeatureItem(Icons.analytics_outlined, 'AI 기반 뉴스 분석'),
+              _buildFeatureItem(Icons.pie_chart_outline, '실시간 지지율 예측'),
+              _buildFeatureItem(Icons.trending_up, '여론 트렌드 분석'),
+              const SizedBox(height: 16),
+              const Text(
+                '피드백 & 제안사항',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  final Uri emailLaunchUri = Uri(
+                    scheme: 'mailto',
+                    path: 'daniel333@dgu.ac.kr',
+                    queryParameters: {'subject': '대선 예측 시뮬레이터 피드백'},
+                  );
+                  launchUrl(emailLaunchUri);
+                },
+                child: Row(
+                  children: [
+                    const Icon(Icons.email_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'daniel333@dgu.ac.kr',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [Icon(icon, size: 20), const SizedBox(width: 8), Text(text)],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredNews = _getFilteredNews();
@@ -122,7 +203,7 @@ class _NewsPageState extends State<NewsPage> {
         shadowColor: isDark ? Colors.black26 : Colors.black12, // 그림자 색상 추가
         surfaceTintColor: isDark ? null : Colors.white, // 라이트모드에서 표면 색상 설정
         title: Text(
-          '대선 뉴스 시뮬레이터',
+          '2025년21대 대선 시뮬레이터',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 22,
@@ -173,6 +254,11 @@ class _NewsPageState extends State<NewsPage> {
             ),
             onPressed: widget.onToggleTheme,
             tooltip: isDark ? '라이트모드' : '다크모드',
+          ),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showAboutDialog,
+            tooltip: '웹사이트 정보',
           ),
         ],
         systemOverlayStyle:

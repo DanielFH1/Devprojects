@@ -128,8 +128,9 @@ def run_news_pipeline():
     else:
         print("❌ 뉴스가 없습니다.")
 
-# 🔁 일정 설정 (예시)
-schedule.every().day.at("01:07").do(run_news_pipeline)
+
+schedule.every(1).hours.do(run_news_pipeline)
+
 
 print("🕒 자동 실행 시작. 종료하려면 Ctrl+C")
 while True:
