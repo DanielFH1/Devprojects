@@ -1,5 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PredictionPage extends StatefulWidget {
   final ThemeMode? themeMode;
@@ -10,15 +12,97 @@ class PredictionPage extends StatefulWidget {
 }
 
 class _PredictionPageState extends State<PredictionPage> {
+  Map<String, dynamic>? candidateStats;
+  bool isLoading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchPredictionData();
+  }
+
+  Future<void> fetchPredictionData() async {
+    try {
+      final response = await http.get(Uri.parse('http://localhost:3000/news'));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final newsData = data['data'];
+
+        if (newsData == null) {
+          throw Exception('뉴스 데이터가 없습니다.');
+        }
+
+        setState(() {
+          candidateStats = newsData['candidate_stats'];
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          error = '서버 오류: ${response.statusCode}';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error = '데이터 불러오기 실패: $e';
+        isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> _calculatePredictions() {
+    if (candidateStats == null) return [];
+
+    final candidates = ['이재명', '김문수', '이준석'];
+    final colors = {
+      '이재명': const Color(0xFF1877F2),
+      '김문수': const Color(0xFFEF3340),
+      '이준석': const Color(0xFFFF9900),
+    };
+
+    // 1. 각 후보별 점수 계산
+    final scores = <String, double>{};
+    for (final name in candidates) {
+      final stats = candidateStats![name] as Map<String, dynamic>;
+      final positive = stats['긍정'] as int;
+      final negative = stats['부정'] as int;
+      final neutral = stats['중립'] as int;
+      final score = positive * 1.5 + neutral + negative * 0.5;
+      scores[name] = score;
+    }
+
+    // 2. 전체 점수 합
+    final totalScore = scores.values.fold(0.0, (a, b) => a + b);
+
+    // 3. 각 후보의 득표율(%) 계산 (정규화)
+    return candidates.map((name) {
+      final percent =
+          totalScore == 0 ? 0.0 : (scores[name]! / totalScore) * 100;
+      return {
+        'name': name,
+        'color': colors[name],
+        'percent': double.parse(percent.toStringAsFixed(1)),
+      };
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // 더미 예측 득표율 데이터
-    final candidates = [
-      {'name': '이재명', 'color': const Color(0xFF1877F2), 'percent': 41.2},
-      {'name': '김문수', 'color': const Color(0xFFEF3340), 'percent': 36.7},
-      {'name': '이준석', 'color': const Color(0xFFFF9900), 'percent': 19.5},
-    ];
+    final candidates = _calculatePredictions();
+
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (error != null) {
+      return Center(
+        child: Text(error!, style: const TextStyle(color: Colors.red)),
+      );
+    }
+
     final total = candidates.fold(
       0.0,
       (sum, c) => sum + (c['percent'] as double),

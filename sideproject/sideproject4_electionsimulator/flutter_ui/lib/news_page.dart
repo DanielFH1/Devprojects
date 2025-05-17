@@ -31,8 +31,10 @@ class _NewsPageState extends State<NewsPage> {
   bool isLoading = true;
   String? error;
   Map<String, dynamic> candidateStats = {};
+  String timeRange = "";
+  int totalArticles = 0;
   String selectedSentiment = '전체';
-  Map<String, bool> _hoveringStates = {}; // 각 후보별 hover 상태를 저장
+  Map<String, bool> _hoveringStates = {};
 
   @override
   void initState() {
@@ -42,26 +44,25 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<void> fetchNewsData() async {
     try {
-      final response = await http.get(Uri.parse('/news'));
+      final response = await http.get(Uri.parse('http://localhost:3000/news'));
+      print('Response status: ${response.statusCode}'); // 디버깅용
+      print('Response body: ${response.body}'); // 디버깅용
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print(data); // API 응답 로그 출력
+        final newsData = data['data'];
 
-        final List<dynamic> newsJson = data['news'];
-        final summary = data['trend_summary'];
-        final stats = data['candidate_stats'];
-
-        if (stats == null) {
-          print('candidate_stats is null'); // null 체크 로그
-        } else {
-          print('candidate_stats: $stats'); // stats 로그 출력
+        if (newsData == null) {
+          throw Exception('뉴스 데이터가 없습니다.');
         }
 
         setState(() {
-          newsList = newsJson.map((item) => NewsItem.fromJson(item)).toList();
-          trendSummary = summary;
-          candidateStats = stats ?? {};
+          trendSummary = newsData['trend_summary'] ?? '데이터를 수집 중입니다...';
+          candidateStats = Map<String, dynamic>.from(
+            newsData['candidate_stats'] ?? {},
+          );
+          timeRange = newsData['time_range'] ?? '';
+          totalArticles = newsData['total_articles'] ?? 0;
           isLoading = false;
         });
       } else {
@@ -71,6 +72,7 @@ class _NewsPageState extends State<NewsPage> {
         });
       }
     } catch (e) {
+      print('Error fetching news: $e'); // 디버깅용
       setState(() {
         error = '데이터 불러오기 실패: $e';
         isLoading = false;
@@ -100,96 +102,8 @@ class _NewsPageState extends State<NewsPage> {
     }
   }
 
-  List<NewsItem> _getFilteredNews() {
-    if (selectedSentiment == '전체') return newsList;
-    return newsList
-        .where((item) => item.sentiment == selectedSentiment)
-        .toList();
-  }
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.info_outline, size: 24),
-              SizedBox(width: 8),
-              Text('대선 예측 시뮬레이터 소개'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '대선 예측 시뮬레이터는 21대 대선 정보에 대한 접근성을 높이고, 시민들이 정치 정보를 더 쉽게 이해하고 분석할 수 있도록 돕기 위해 제작되었습니다.',
-                style: TextStyle(fontSize: 16, height: 1.5),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                '주요 기능:',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              _buildFeatureItem(Icons.analytics_outlined, 'AI 기반 뉴스 분석'),
-              _buildFeatureItem(Icons.pie_chart_outline, '실시간 지지율 예측'),
-              _buildFeatureItem(Icons.trending_up, '여론 트렌드 분석'),
-              const SizedBox(height: 16),
-              const Text(
-                '피드백 & 제안사항',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () {
-                  final Uri emailLaunchUri = Uri(
-                    scheme: 'mailto',
-                    path: 'daniel333@dgu.ac.kr',
-                    queryParameters: {'subject': '대선 예측 시뮬레이터 피드백'},
-                  );
-                  launchUrl(emailLaunchUri);
-                },
-                child: Row(
-                  children: [
-                    const Icon(Icons.email_outlined, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      'daniel333@dgu.ac.kr',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('닫기'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildFeatureItem(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [Icon(icon, size: 20), const SizedBox(width: 8), Text(text)],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filteredNews = _getFilteredNews();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final appBarColor = isDark ? const Color(0xFF232A36) : Colors.white;
     final candidateList = candidateStats.entries.toList();
@@ -469,68 +383,122 @@ class _NewsPageState extends State<NewsPage> {
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 900),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '📰 최신 뉴스',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ...filteredNews.map(
-                            (news) => _HoverCard(
-                              child: Card(
-                                color: _getCardColor(news.sentiment),
-                                elevation: 1,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: ListTile(
-                                  title: Text(
-                                    news.title,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color:
-                                          isDark ? Colors.white : Colors.black,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    news.summary,
-                                    style: TextStyle(
-                                      color:
-                                          isDark
-                                              ? Colors.white70
-                                              : Colors.black87,
-                                    ),
-                                  ),
-                                  trailing: Text(
-                                    news.sentiment,
-                                    style: TextStyle(
-                                      color:
-                                          news.sentiment == '긍정'
-                                              ? Colors.green
-                                              : news.sentiment == '부정'
-                                              ? Colors.red
-                                              : Colors.grey,
-                                    ),
-                                  ),
-                                  onTap: () {
-                                    _launchUrl(news.url);
-                                  },
+                      child: Card(
+                        color: isDark ? const Color(0xFF232A36) : Colors.white,
+                        elevation: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '📊 데이터 정보',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color:
+                                      isDark ? Colors.white70 : Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, size: 24),
+              SizedBox(width: 8),
+              Text('대선 예측 시뮬레이터 소개'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '대선 예측 시뮬레이터는 21대 대선 정보에 대한 접근성을 높이고, 시민들이 정치 정보를 더 쉽게 이해하고 분석할 수 있도록 돕기 위해 제작되었습니다.',
+                style: TextStyle(fontSize: 16, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '주요 기능:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              _buildFeatureItem(Icons.analytics_outlined, 'AI 기반 뉴스 분석'),
+              _buildFeatureItem(Icons.pie_chart_outline, '실시간 지지율 예측'),
+              _buildFeatureItem(Icons.trending_up, '여론 트렌드 분석'),
+              const SizedBox(height: 16),
+              const Text(
+                '피드백 & 제안사항',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  final Uri emailLaunchUri = Uri(
+                    scheme: 'mailto',
+                    path: 'daniel333@dgu.ac.kr',
+                    queryParameters: {'subject': '대선 예측 시뮬레이터 피드백'},
+                  );
+                  launchUrl(emailLaunchUri);
+                },
+                child: Row(
+                  children: [
+                    const Icon(Icons.email_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'daniel333@dgu.ac.kr',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [Icon(icon, size: 20), const SizedBox(width: 8), Text(text)],
+      ),
     );
   }
 }

@@ -1,98 +1,216 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import json
 from pathlib import Path
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+import threading
+import schedule
+import time
+from datetime import datetime, timedelta
+import sys
+import os
+import logging
+from typing import Dict, Any, Optional
+from collections import defaultdict
 
-app = FastAPI()  # FastAPI 인스턴스 생성
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# 프로젝트 루트 디렉토리를 Python 경로에 추가
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(BASE_DIR))
+
+# !scrapper.py의 함수들을 임포트
+from news_scraper import run_news_pipeline, NewsPipeline
+
+app = FastAPI()
 
 # --- 경로 설정 ---
-# api_server.py 파일의 위치를 기준으로 상대 경로를 계산합니다.
-# __file__은 현재 파일(api_server.py)의 경로입니다.
-# .resolve()는 심볼릭 링크 등을 해석하여 실제 경로를 얻습니다.
-# .parent는 현재 파일이 있는 디렉토리 (web/)
-# .parent.parent는 프로젝트 루트 디렉토리 (sideprojects4_electionsimulator/)
 BASE_DIR = Path(__file__).resolve().parent.parent
 FLUTTER_BUILD_DIR = BASE_DIR / "flutter_ui" / "build" / "web"
 ASSETS_DIR = BASE_DIR / "assets"
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- CORS 미들웨어 설정 ---
-# Flutter 웹 앱 (다른 포트 또는 도메인에서 실행될 수 있음)에서의 API 요청을 허용합니다.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 개발 중에는 모든 출처 허용, 배포 시에는 특정 도메인으로 제한하는 것이 좋습니다.
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # 모든 HTTP 메소드 허용
-    allow_headers=["*"],  # 모든 HTTP 헤더 허용
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# --- API 엔드포인트 ---
-@app.get("/sitemap.xml")
-async def get_sitemap():
-    sitemap_path = FLUTTER_BUILD_DIR / "sitemap.xml"
-    if sitemap_path.exists():
-        return FileResponse(str(sitemap_path), media_type="application/xml")
-    raise HTTPException(status_code=404, detail="Sitemap not found")
+# --- 전역 변수 및 캐시 관리 ---
+class NewsCache:
+    def __init__(self):
+        self.latest_data: Optional[Dict[str, Any]] = None
+        self.last_update: Optional[datetime] = None
+        self.update_count: int = 0
+        self.error_count: int = 0
+        self.last_error: Optional[str] = None
+        self.pipeline = NewsPipeline()
 
-@app.get("/robots.txt")
-async def get_robots():
-    robots_path = FLUTTER_BUILD_DIR / "robots.txt"
-    if robots_path.exists():
-        return FileResponse(str(robots_path), media_type="text/plain")
-    raise HTTPException(status_code=404, detail="Robots.txt not found")
+    def update(self, data: Dict[str, Any]):
+        self.latest_data = data
+        self.last_update = datetime.now()
+        self.update_count += 1
+        self.error_count = 0
+        self.last_error = None
+
+    def record_error(self, error: str):
+        self.error_count += 1
+        self.last_error = error
+        logger.error(f"캐시 업데이트 오류: {error}")
+
+    def get_status(self) -> Dict[str, Any]:
+        return {
+            "last_update": self.last_update.isoformat() if self.last_update else None,
+            "update_count": self.update_count,
+            "error_count": self.error_count,
+            "last_error": self.last_error,
+            "is_healthy": self.error_count < 3 and self.last_update is not None
+        }
+
+news_cache = NewsCache()
+
+def update_news_cache():
+    """assets 폴더에서 최신 뉴스 데이터를 읽어와 캐시를 업데이트"""
+    try:
+        news_files = sorted(
+            ASSETS_DIR.glob("trend_summary_*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True
+        )
+        
+        if not news_files:
+            news_cache.record_error("뉴스 데이터 파일을 찾을 수 없습니다.")
+            return
+
+        with open(news_files[0], "r", encoding="utf-8") as f:
+            data = json.load(f)
+            # 기본값 설정으로 null 방지
+            processed_data = {
+                "trend_summary": data.get("trend_summary", ""),
+                "candidate_stats": data.get("candidate_stats", {
+                    "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                    "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                    "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                }),
+                "total_articles": data.get("total_articles", 0),
+                "time_range": data.get("time_range", "")
+            }
+            news_cache.update(processed_data)
+            logger.info(f"✅ 뉴스 캐시 업데이트 완료: {news_files[0].name}")
+            
+    except Exception as e:
+        news_cache.record_error(str(e))
+        logger.error(f"캐시 업데이트 실패: {str(e)}")
+
+def run_scheduler():
+    """백그라운드에서 스케줄러 실행"""
+    while True:
+        try:
+            schedule.run_pending()
+            time.sleep(1)
+        except Exception as e:
+            logger.error(f"❌ 스케줄러 오류: {str(e)}")
+            time.sleep(60)
+
+# --- API 엔드포인트 ---
+@app.get("/status")
+async def get_status():
+    """서버 상태 확인 엔드포인트"""
+    return {
+        "status": "healthy" if news_cache.get_status()["is_healthy"] else "degraded",
+        "cache": news_cache.get_status(),
+        "server_time": datetime.now().isoformat(),
+        "uptime": str(datetime.now() - news_cache.last_update) if news_cache.last_update else None
+    }
 
 @app.get("/news")
-def get_news_data():
-    # assets 폴더에서 최신 news_summary_*.json 파일을 찾도록 수정
-    news_files = sorted(ASSETS_DIR.glob("news_summary_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+async def get_news_data():
+    """뉴스 데이터 조회 엔드포인트"""
+    if not news_cache.latest_data:
+        update_news_cache()
+        if not news_cache.latest_data:
+            # 기본 데이터 반환
+            default_data = {
+                "trend_summary": "데이터를 수집 중입니다...",
+                "candidate_stats": {
+                    "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                    "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                    "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                },
+                "total_articles": 0,
+                "time_range": "데이터 수집 중"
+            }
+            return {
+                "data": default_data,
+                "metadata": {
+                    "last_updated": datetime.now().isoformat(),
+                    "next_update": (datetime.now() + timedelta(hours=1)).isoformat()
+                }
+            }
+    
+    return {
+        "data": news_cache.latest_data,
+        "metadata": {
+            "last_updated": news_cache.last_update.isoformat(),
+            "next_update": (news_cache.last_update + timedelta(hours=1)).isoformat() if news_cache.last_update else None
+        }
+    }
 
-    if not news_files:
-        raise HTTPException(
-            status_code=404,
-            detail=f"'assets' 폴더에서 'news_summary_YYYY-MM-DD_HH-MM.json' 형식의 뉴스 요약 파일을 찾을 수 없습니다. '!scrapper.py'를 실행하여 파일이 생성되었는지 확인하세요."
-        )
+@app.post("/refresh")
+async def force_refresh(background_tasks: BackgroundTasks):
+    """수동으로 뉴스 데이터 새로고침"""
+    background_tasks.add_task(run_news_pipeline)
+    return {"message": "뉴스 데이터 새로고침이 시작되었습니다."}
 
-    news_file_path = news_files[0] # 가장 최신 파일 사용
+# --- 서버 시작 이벤트 ---
+@app.on_event("startup")
+async def startup_event():
+    # 초기 뉴스 데이터 로드
+    update_news_cache()
+    
+    # 스케줄러 설정
+    schedule.every(1).hours.do(run_news_pipeline)
+    schedule.every(5).minutes.do(update_news_cache)
+    
+    # 백그라운드 스레드에서 스케줄러 실행
+    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+    scheduler_thread.start()
+    logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다.")
 
-    try:
-        with open(news_file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data
-    except FileNotFoundError:
-        # 이 경우는 glob에서 파일을 찾지 못했을 때 발생하지 않으므로, 위의 news_files 체크로 충분합니다.
-        # 만약 특정 파일명을 고정으로 사용한다면 이 예외 처리가 유용합니다.
-        raise HTTPException(status_code=404, detail=f"뉴스 파일 '{news_file_path.name}'을(를) 찾을 수 없습니다.")
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail=f"뉴스 파일 '{news_file_path.name}'의 JSON 형식이 잘못되었습니다.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"뉴스 데이터 로딩 중 오류 발생: {str(e)}")
-
-
-# --- Flutter 웹 애플리케이션 제공 ---
-# FLUTTER_BUILD_DIR이 실제로 존재하는지, index.html이 있는지 먼저 확인합니다.
+# --- Flutter 웹 앱 제공 ---
 if not FLUTTER_BUILD_DIR.exists() or not (FLUTTER_BUILD_DIR / "index.html").exists():
-    print(f"경고: Flutter 빌드 디렉토리 또는 index.html을 찾을 수 없습니다: {FLUTTER_BUILD_DIR}")
-    print(f"Flutter UI를 올바르게 제공하려면 'flutter_ui' 디렉토리 내에서 'flutter build web' 명령을 실행하여 웹 파일을 빌드해야 합니다.")
-    # 기본적인 API 서버 역할만 하도록 루트 경로에 간단한 메시지를 반환할 수 있습니다.
+    logger.warning(f"Flutter 빌드 디렉토리를 찾을 수 없습니다: {FLUTTER_BUILD_DIR}")
+    
     @app.get("/")
     async def fallback_root():
-        return {
+        return JSONResponse({
+            "status": "warning",
             "message": "Flutter UI 빌드 파일을 찾을 수 없습니다. API는 /news 에서 사용 가능합니다.",
-            "flutter_build_path_expected": str(FLUTTER_BUILD_DIR)
-        }
+            "endpoints": {
+                "/news": "뉴스 데이터 조회",
+                "/status": "서버 상태 확인",
+                "/refresh": "수동 데이터 새로고침"
+            }
+        })
 else:
-    # Flutter 웹 앱의 정적 파일들을 제공하기 전에 API 라우트를 먼저 설정합니다.
     @app.get("/")
     async def root():
         return FileResponse(FLUTTER_BUILD_DIR / "index.html")
 
-    # Flutter 웹 앱의 정적 파일들(JS, CSS, 이미지 등)을 제공합니다.
+    # 정적 파일 제공
     app.mount("/assets", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "assets")), name="flutter_assets")
     app.mount("/icons", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "icons")), name="flutter_icons")
     app.mount("/canvaskit", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "canvaskit")), name="flutter_canvaskit")
     
-    # Flutter 웹 앱의 JavaScript 파일들을 제공합니다.
     @app.get("/{path:path}")
     async def serve_flutter_web(path: str):
         file_path = FLUTTER_BUILD_DIR / path
