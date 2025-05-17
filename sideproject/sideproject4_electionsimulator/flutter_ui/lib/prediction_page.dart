@@ -24,7 +24,8 @@ class _PredictionPageState extends State<PredictionPage> {
 
   Future<void> fetchPredictionData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/news'));
+      final uri = Uri.base.resolve('/news');
+      final response = await http.get(uri);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

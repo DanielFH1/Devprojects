@@ -44,7 +44,8 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<void> fetchNewsData() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:3000/news'));
+      final uri = Uri.base.resolve('/news');
+      final response = await http.get(uri);
       print('Response status: ${response.statusCode}'); // 디버깅용
       print('Response body: ${response.body}'); // 디버깅용
 
