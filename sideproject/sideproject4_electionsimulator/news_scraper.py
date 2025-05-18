@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 import hashlib
 from dataclasses import dataclass
 import logging
+import backoff  # 백오프 재시도 라이브러리 추가
 
 # 로깅 설정
 logging.basicConfig(
@@ -85,9 +86,52 @@ class NewsAnalyzer:
     """뉴스 분석기 클래스"""
     def __init__(self):
         self.candidate_list = ["이재명", "김문수", "이준석"]
+        self.cache_dir = Path("cache")
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
     
-    def summarize_news(self, title: str, description: str) -> str:
-        """기사 요약"""
+    def _get_cache_path(self, article_id: str, analysis_type: str) -> Path:
+        """캐시 파일 경로 생성"""
+        return self.cache_dir / f"{article_id}_{analysis_type}.json"
+    
+    def _load_from_cache(self, article_id: str, analysis_type: str) -> Optional[str]:
+        """캐시에서 분석 결과 로드"""
+        cache_path = self._get_cache_path(article_id, analysis_type)
+        if cache_path.exists():
+            try:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    # 캐시가 24시간 이내인지 확인
+                    if datetime.datetime.now().timestamp() - data.get("timestamp", 0) < 86400:
+                        return data.get("result")
+            except Exception as e:
+                logger.error(f"캐시 로드 실패: {str(e)}")
+        return None
+    
+    def _save_to_cache(self, article_id: str, analysis_type: str, result: str):
+        """분석 결과를 캐시에 저장"""
+        cache_path = self._get_cache_path(article_id, analysis_type)
+        try:
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump({
+                    "result": result,
+                    "timestamp": datetime.datetime.now().timestamp()
+                }, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"캐시 저장 실패: {str(e)}")
+
+    @backoff.on_exception(
+        backoff.expo,
+        (openai.RateLimitError, openai.APIError, openai.AuthenticationError),
+        max_tries=3,
+        max_time=30
+    )
+    def summarize_news(self, article_id: str, title: str, description: str) -> str:
+        """기사 요약 (캐시 사용)"""
+        # 캐시 확인
+        cached_result = self._load_from_cache(article_id, "summary")
+        if cached_result:
+            return cached_result
+
         system_msg = "당신은 똑똑한 뉴스 요약가입니다. 한국 정치뉴스를 간결하게 요약해줍니다."
         user_msg = f"""[뉴스 제목]: {title}\n[내용 요약 대상]: {description}\n\n이 기사를 3줄 이내로 요약해줘."""
 
@@ -100,13 +144,27 @@ class NewsAnalyzer:
                 ],
                 temperature=0.5
             )
-            return response.choices[0].message.content.strip()
+            result = response.choices[0].message.content.strip()
+            # 결과 캐시에 저장
+            self._save_to_cache(article_id, "summary", result)
+            return result
         except Exception as e:
             logger.error(f"기사 요약 실패: {str(e)}")
             return ""
 
-    def analyze_sentiment(self, title: str, description: str) -> str:
-        """감성 분석"""
+    @backoff.on_exception(
+        backoff.expo,
+        (openai.RateLimitError, openai.APIError, openai.AuthenticationError),
+        max_tries=3,
+        max_time=30
+    )
+    def analyze_sentiment(self, article_id: str, title: str, description: str) -> str:
+        """감성 분석 (캐시 사용)"""
+        # 캐시 확인
+        cached_result = self._load_from_cache(article_id, "sentiment")
+        if cached_result:
+            return cached_result
+
         system_msg = "당신은 뉴스 기사의 감성 분석가입니다."
         user_msg = f"""[뉴스 제목]: {title}\n[뉴스 설명]: {description}\n\n이 뉴스는 긍정적인가요, 부정적인가요, 중립적인가요? 아래 중 하나로만 대답하세요.\n- 긍정\n- 부정\n- 중립"""
 
@@ -120,11 +178,20 @@ class NewsAnalyzer:
                 temperature=0.3
             )
             result = response.choices[0].message.content.strip()
-            return result.replace('-', '').replace(':', '').strip()
+            result = result.replace('-', '').replace(':', '').strip()
+            # 결과 캐시에 저장
+            self._save_to_cache(article_id, "sentiment", result)
+            return result
         except Exception as e:
             logger.error(f"감성 분석 실패: {str(e)}")
             return "중립"
 
+    @backoff.on_exception(
+        backoff.expo,
+        (openai.RateLimitError, openai.APIError, openai.AuthenticationError),
+        max_tries=3,
+        max_time=30
+    )
     def analyze_trends(self, news_data: List[Dict[str, Any]], time_range: str) -> Dict[str, Any]:
         """트렌드 분석"""
         system_msg = "당신은 대선 뉴스를 분석하는 정치 전략가입니다."
@@ -180,8 +247,8 @@ class NewsPipeline:
         """기사 처리 (요약 및 감성 분석)"""
         processed_news = []
         for article in articles:
-            summary = self.analyzer.summarize_news(article.title, article.description)
-            sentiment = self.analyzer.analyze_sentiment(article.title, article.description)
+            summary = self.analyzer.summarize_news(article.unique_id, article.title, article.description)
+            sentiment = self.analyzer.analyze_sentiment(article.unique_id, article.title, article.description)
             
             processed_news.append({
                 "title": article.title,
@@ -205,8 +272,8 @@ class NewsPipeline:
         logger.info(f"✅ 트렌드 요약 저장 완료: {filename}")
     
     def run_hourly_collection(self):
-        """1시간마다 실행되는 뉴스 수집 및 처리"""
-        logger.info("⏳ 뉴스 수집 및 분석 시작...")
+        """1시간마다 실행되는 뉴스 수집"""
+        logger.info("⏳ 뉴스 수집 시작...")
         
         # 뉴스 수집
         articles = self.collector.collect_all_news()
@@ -240,8 +307,8 @@ def run_news_pipeline():
     pipeline.run_hourly_collection()
 
 # 스케줄러 설정
-#schedule.every(1).hours.do(run_news_pipeline)
-schedule.every().day.at("11:41").do(run_news_pipeline)
+schedule.every(1).hours.do(run_news_pipeline)  # 1시간마다 뉴스 수집
+schedule.every().day.at("06:00").do(lambda: pipeline.analyzer.analyze_trends(pipeline.temp_storage, "전일"))  # 매일 오전 6시에 트렌드 분석
 
 if __name__ == "__main__":
     logger.info("🕒 자동 실행 시작. 종료하려면 Ctrl+C")

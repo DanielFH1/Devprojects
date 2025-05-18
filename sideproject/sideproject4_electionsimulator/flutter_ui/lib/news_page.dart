@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:async'; // TimeoutException을 위해 추가
+import 'dart:io'; // SocketException을 위해 추가
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -44,10 +46,15 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<void> fetchNewsData() async {
     try {
-      final uri = Uri.base.resolve('/news');
-      final response = await http.get(uri);
-      print('Response status: ${response.statusCode}'); // 디버깅용
-      print('Response body: ${response.body}'); // 디버깅용
+      final uri = Uri.parse('http://localhost:3000/news'); // 명시적으로 http:// 추가
+      final response = await http
+          .get(uri)
+          .timeout(
+            const Duration(seconds: 10), // 타임아웃 설정
+            onTimeout: () {
+              throw TimeoutException('서버 응답 시간이 초과되었습니다.');
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -64,7 +71,19 @@ class _NewsPageState extends State<NewsPage> {
           );
           timeRange = newsData['time_range'] ?? '';
           totalArticles = newsData['total_articles'] ?? 0;
+
+          // 뉴스 리스트 업데이트
+          if (newsData['news_list'] != null) {
+            newsList =
+                (newsData['news_list'] as List)
+                    .map((item) => NewsItem.fromJson(item))
+                    .toList();
+          } else {
+            newsList = [];
+          }
+
           isLoading = false;
+          error = null;
         });
       } else {
         setState(() {
@@ -72,6 +91,16 @@ class _NewsPageState extends State<NewsPage> {
           isLoading = false;
         });
       }
+    } on TimeoutException {
+      setState(() {
+        error = '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+        isLoading = false;
+      });
+    } on SocketException {
+      setState(() {
+        error = '서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.';
+        isLoading = false;
+      });
     } catch (e) {
       print('Error fetching news: $e'); // 디버깅용
       setState(() {
@@ -114,9 +143,9 @@ class _NewsPageState extends State<NewsPage> {
           isDark ? const Color(0xFF181C23) : const Color(0xFFF7F8FA),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF232A36) : Colors.white,
-        elevation: isDark ? 0.5 : 2, // 라이트모드에서 그림자 강화
-        shadowColor: isDark ? Colors.black26 : Colors.black12, // 그림자 색상 추가
-        surfaceTintColor: isDark ? null : Colors.white, // 라이트모드에서 표면 색상 설정
+        elevation: isDark ? 0.5 : 2,
+        shadowColor: isDark ? Colors.black26 : Colors.black12,
+        surfaceTintColor: isDark ? null : Colors.white,
         title: Text(
           '2025년21대 대선 시뮬레이터',
           style: TextStyle(
@@ -178,6 +207,19 @@ class _NewsPageState extends State<NewsPage> {
         ],
         systemOverlayStyle:
             isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(40),
+          child: Container(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+          ),
+        ),
       ),
       body:
           isLoading
@@ -286,6 +328,9 @@ class _NewsPageState extends State<NewsPage> {
                                               'title': n.title,
                                               'summary': n.summary,
                                               'sentiment': n.sentiment,
+                                              'url': n.url,
+                                              'published_date': n.publishedDate,
+                                              'source': n.source,
                                             },
                                           )
                                           .toList();
@@ -298,12 +343,12 @@ class _NewsPageState extends State<NewsPage> {
                                             builder:
                                                 (context) =>
                                                     CandidateDetailPage(
-                                                      candidateName: name,
-                                                      color: color,
-                                                      pledgeUrl: pledgeUrl,
-                                                      pledgeSummary:
-                                                          pledgeSummary,
-                                                      newsList: candidateNews,
+                                                      candidate: name,
+                                                      news: candidateNews,
+                                                      themeMode:
+                                                          widget.themeMode,
+                                                      onToggleTheme:
+                                                          widget.onToggleTheme,
                                                     ),
                                           ),
                                         );
@@ -391,29 +436,23 @@ class _NewsPageState extends State<NewsPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                '📊 데이터 정보',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color:
-                                      isDark ? Colors.white70 : Colors.black87,
-                                ),
-                              ),
-                            ],
+                        child: ExpansionTile(
+                          title: const Text(
+                            '📊 취합된 뉴스 기사 목록',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
+                          children: [
+                            ...newsList.map(
+                              (news) => _NewsCard(
+                                news: news,
+                                isDark: isDark,
+                                onTap: () => _launchUrl(news.url),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -504,36 +543,113 @@ class _NewsPageState extends State<NewsPage> {
   }
 }
 
-class _HoverCard extends StatefulWidget {
-  final Widget child;
-  final Color? hoverColor;
-  const _HoverCard({required this.child, this.hoverColor});
-  @override
-  State<_HoverCard> createState() => _HoverCardState();
-}
+class _NewsCard extends StatelessWidget {
+  final NewsItem news;
+  final bool isDark;
+  final VoidCallback onTap;
 
-class _HoverCardState extends State<_HoverCard> {
-  bool _hovering = false;
+  const _NewsCard({
+    required this.news,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  Color _getSentimentColor(String sentiment) {
+    switch (sentiment.trim()) {
+      case "긍정":
+        return Colors.green;
+      case "부정":
+        return Colors.red;
+      case "중립":
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getCandidateColor(String title, String summary) {
+    if (title.contains('이재명') || summary.contains('이재명')) {
+      return Colors.green;
+    } else if (title.contains('김문수') || summary.contains('김문수')) {
+      return Colors.grey;
+    } else if (title.contains('이준석') || summary.contains('이준석')) {
+      return Colors.red;
+    }
+    return Colors.grey;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        transform:
-            _hovering
-                ? (Matrix4.identity()..scale(1.015, 1.015))
-                : Matrix4.identity(),
-        decoration:
-            widget.hoverColor != null && _hovering
-                ? BoxDecoration(
-                  color: widget.hoverColor!.withOpacity(isDark ? 0.7 : 0.13),
-                  borderRadius: BorderRadius.circular(16),
-                )
-                : null,
-        child: widget.child,
+    final candidateColor = _getCandidateColor(news.title, news.summary);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      color: isDark ? const Color(0xFF1A1E26) : Colors.grey[50],
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: candidateColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        title: Text(
+          news.title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              news.summary,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _getSentimentColor(news.sentiment).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    news.sentiment,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _getSentimentColor(news.sentiment),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  news.source,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  news.publishedDate,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        onTap: onTap,
       ),
     );
   }

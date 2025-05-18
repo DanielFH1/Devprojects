@@ -34,7 +34,33 @@ app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent.parent
 FLUTTER_BUILD_DIR = BASE_DIR / "flutter_ui" / "build" / "web"
 ASSETS_DIR = BASE_DIR / "assets"
-ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+
+# assets 디렉토리가 없으면 생성
+try:
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"✅ assets 디렉토리 확인/생성 완료: {ASSETS_DIR}")
+except Exception as e:
+    logger.error(f"❌ assets 디렉토리 생성 실패: {str(e)}")
+
+# 기본 데이터 파일 생성
+DEFAULT_DATA_FILE = ASSETS_DIR / "trend_summary_default.json"
+if not DEFAULT_DATA_FILE.exists():
+    try:
+        default_data = {
+            "trend_summary": "데이터를 수집 중입니다...",
+            "candidate_stats": {
+                "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+            },
+            "total_articles": 0,
+            "time_range": "데이터 수집 중"
+        }
+        with open(DEFAULT_DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(default_data, f, ensure_ascii=False, indent=2)
+        logger.info("✅ 기본 데이터 파일 생성 완료")
+    except Exception as e:
+        logger.error(f"❌ 기본 데이터 파일 생성 실패: {str(e)}")
 
 # --- CORS 미들웨어 설정 ---
 app.add_middleware(
@@ -88,24 +114,38 @@ def update_news_cache():
         )
         
         if not news_files:
-            news_cache.record_error("뉴스 데이터 파일을 찾을 수 없습니다.")
+            logger.warning("뉴스 데이터 파일을 찾을 수 없어 기본 데이터를 사용합니다.")
+            if DEFAULT_DATA_FILE.exists():
+                with open(DEFAULT_DATA_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    news_cache.update(data)
+                    logger.info("✅ 기본 데이터로 캐시 업데이트 완료")
+            else:
+                news_cache.record_error("뉴스 데이터 파일을 찾을 수 없습니다.")
             return
 
-        with open(news_files[0], "r", encoding="utf-8") as f:
-            data = json.load(f)
-            # 기본값 설정으로 null 방지
-            processed_data = {
-                "trend_summary": data.get("trend_summary", ""),
-                "candidate_stats": data.get("candidate_stats", {
-                    "이재명": {"긍정": 0, "부정": 0, "중립": 0},
-                    "김문수": {"긍정": 0, "부정": 0, "중립": 0},
-                    "이준석": {"긍정": 0, "부정": 0, "중립": 0}
-                }),
-                "total_articles": data.get("total_articles", 0),
-                "time_range": data.get("time_range", "")
-            }
-            news_cache.update(processed_data)
-            logger.info(f"✅ 뉴스 캐시 업데이트 완료: {news_files[0].name}")
+        try:
+            with open(news_files[0], "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 기본값 설정으로 null 방지
+                processed_data = {
+                    "trend_summary": data.get("trend_summary", "데이터를 수집 중입니다..."),
+                    "candidate_stats": data.get("candidate_stats", {
+                        "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                        "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                        "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                    }),
+                    "total_articles": data.get("total_articles", 0),
+                    "time_range": data.get("time_range", "데이터 수집 중")
+                }
+                news_cache.update(processed_data)
+                logger.info(f"✅ 뉴스 캐시 업데이트 완료: {news_files[0].name}")
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON 파싱 오류: {str(e)}")
+            news_cache.record_error(f"JSON 파싱 오류: {str(e)}")
+        except Exception as e:
+            logger.error(f"파일 읽기 오류: {str(e)}")
+            news_cache.record_error(f"파일 읽기 오류: {str(e)}")
             
     except Exception as e:
         news_cache.record_error(str(e))
@@ -135,35 +175,62 @@ async def get_status():
 @app.get("/news")
 async def get_news_data():
     """뉴스 데이터 조회 엔드포인트"""
-    if not news_cache.latest_data:
-        update_news_cache()
+    try:
         if not news_cache.latest_data:
-            # 기본 데이터 반환
-            default_data = {
-                "trend_summary": "데이터를 수집 중입니다...",
+            update_news_cache()
+            if not news_cache.latest_data:
+                # 기본 데이터 반환
+                if DEFAULT_DATA_FILE.exists():
+                    with open(DEFAULT_DATA_FILE, "r", encoding="utf-8") as f:
+                        default_data = json.load(f)
+                else:
+                    default_data = {
+                        "trend_summary": "데이터를 수집 중입니다...",
+                        "candidate_stats": {
+                            "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                            "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                            "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                        },
+                        "total_articles": 0,
+                        "time_range": "데이터 수집 중"
+                    }
+                return {
+                    "data": default_data,
+                    "metadata": {
+                        "last_updated": datetime.now().isoformat(),
+                        "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
+                        "status": "using_default"
+                    }
+                }
+        
+        return {
+            "data": news_cache.latest_data,
+            "metadata": {
+                "last_updated": news_cache.last_update.isoformat(),
+                "next_update": (news_cache.last_update + timedelta(hours=1)).isoformat() if news_cache.last_update else None,
+                "status": "success"
+            }
+        }
+    except Exception as e:
+        logger.error(f"뉴스 데이터 조회 실패: {str(e)}")
+        return {
+            "data": {
+                "trend_summary": "데이터를 불러오는 중 오류가 발생했습니다.",
                 "candidate_stats": {
                     "이재명": {"긍정": 0, "부정": 0, "중립": 0},
                     "김문수": {"긍정": 0, "부정": 0, "중립": 0},
                     "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                 },
                 "total_articles": 0,
-                "time_range": "데이터 수집 중"
+                "time_range": "오류 발생"
+            },
+            "metadata": {
+                "last_updated": datetime.now().isoformat(),
+                "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
+                "status": "error",
+                "error": str(e)
             }
-            return {
-                "data": default_data,
-                "metadata": {
-                    "last_updated": datetime.now().isoformat(),
-                    "next_update": (datetime.now() + timedelta(hours=1)).isoformat()
-                }
-            }
-    
-    return {
-        "data": news_cache.latest_data,
-        "metadata": {
-            "last_updated": news_cache.last_update.isoformat(),
-            "next_update": (news_cache.last_update + timedelta(hours=1)).isoformat() if news_cache.last_update else None
         }
-    }
 
 @app.post("/refresh")
 async def force_refresh(background_tasks: BackgroundTasks):
@@ -175,11 +242,17 @@ async def force_refresh(background_tasks: BackgroundTasks):
 @app.on_event("startup")
 async def startup_event():
     # 초기 뉴스 데이터 로드
-    update_news_cache()
+    try:
+        logger.info("🔄 초기 데이터 로드 시작...")
+        update_news_cache()  # 캐시 업데이트만 수행
+        logger.info("✅ 초기 데이터 로드 완료")
+    except Exception as e:
+        logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
     
     # 스케줄러 설정
-    schedule.every(1).hours.do(run_news_pipeline)
-    schedule.every(5).minutes.do(update_news_cache)
+    schedule.every(1).hours.do(run_news_pipeline)  # 1시간마다 뉴스 수집
+    schedule.every().day.at("06:00").do(lambda: pipeline.analyzer.analyze_trends(pipeline.temp_storage, "전일"))  # 매일 오전 6시에 트렌드 분석
+    schedule.every(5).minutes.do(update_news_cache)  # 캐시 업데이트는 5분마다 유지
     
     # 백그라운드 스레드에서 스케줄러 실행
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
