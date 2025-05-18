@@ -46,7 +46,7 @@ class _NewsPageState extends State<NewsPage> {
 
   Future<void> fetchNewsData() async {
     try {
-      final uri = Uri.parse('http://localhost:3000/news'); // 명시적으로 http:// 추가
+      final uri = Uri.base.resolve('/news'); // 상대 경로로 변경
       final response = await http
           .get(uri)
           .timeout(
