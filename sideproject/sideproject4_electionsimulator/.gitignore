@@ -10,6 +10,7 @@ __pycache__/
 
 # Flutter/Dart
 build/
+!flutter_ui/build/web/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies

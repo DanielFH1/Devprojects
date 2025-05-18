@@ -5,7 +5,6 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
@@ -42,3 +41,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Build directories to ignore
+/build/android/
+/build/ios/
+/build/linux/
+/build/macos/
+/build/windows/
+/build/app/
+/build/test/
+
+# Keep web build
+!/build/web/
