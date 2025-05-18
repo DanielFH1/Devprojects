@@ -135,8 +135,9 @@ class _NewsPageState extends State<NewsPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final appBarColor = isDark ? const Color(0xFF232A36) : Colors.white;
-    final candidateList = candidateStats.entries.toList();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    final isSmallMobile = screenWidth < 360;
 
     return Scaffold(
       backgroundColor:
@@ -147,36 +148,57 @@ class _NewsPageState extends State<NewsPage> {
         shadowColor: isDark ? Colors.black26 : Colors.black12,
         surfaceTintColor: isDark ? null : Colors.white,
         title: Text(
-          '2025년21대 대선 시뮬레이터',
+          isMobile ? '대선 시뮬레이터' : '2025년 21대 대선 시뮬레이터',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 22,
+            fontSize: isSmallMobile ? 18 : (isMobile ? 20 : 22),
             letterSpacing: -1,
             color: isDark ? Colors.white : Colors.black87,
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.bar_chart, size: 20),
-              label: const Text(
-                'AI 예측',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber[700],
-                foregroundColor: Colors.white,
-                elevation: 2,
-                shadowColor: Colors.black26,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          if (!isSmallMobile) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 4 : 8),
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.bar_chart, size: 20),
+                label: Text(
+                  'AI 예측',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isMobile ? 13 : 14,
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 10,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber[700],
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shadowColor: Colors.black26,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 18,
+                    vertical: isMobile ? 8 : 10,
+                  ),
                 ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => PredictionPage(
+                            themeMode: widget.themeMode,
+                            onToggleTheme: widget.onToggleTheme,
+                          ),
+                    ),
+                  );
+                },
               ),
+            ),
+          ] else ...[
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -189,8 +211,9 @@ class _NewsPageState extends State<NewsPage> {
                   ),
                 );
               },
+              tooltip: 'AI 예측',
             ),
-          ),
+          ],
           IconButton(
             icon: Icon(
               isDark ? Icons.light_mode : Icons.dark_mode,
@@ -208,15 +231,16 @@ class _NewsPageState extends State<NewsPage> {
         systemOverlayStyle:
             isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(40),
+          preferredSize: Size.fromHeight(isMobile ? 32 : 40),
           child: Container(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: isMobile ? 4 : 8),
             child: Text(
               '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: isMobile ? 11 : 13,
                 color: isDark ? Colors.white60 : Colors.black54,
               ),
+              textAlign: TextAlign.center,
             ),
           ),
         ),
@@ -226,197 +250,76 @@ class _NewsPageState extends State<NewsPage> {
               ? const Center(child: CircularProgressIndicator())
               : error != null
               ? Center(
-                child: Text(error!, style: const TextStyle(color: Colors.red)),
+                child: Text(
+                  error!,
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: isMobile ? 14 : 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               )
               : ListView(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 32,
-                  horizontal: 0,
+                padding: EdgeInsets.symmetric(
+                  vertical: isMobile ? 16 : 32,
+                  horizontal: isMobile ? 8 : 16,
                 ),
                 children: [
-                  // 후보별 감성 통계 (GridView로 3개 한 줄)
+                  // 후보별 감성 통계
                   Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1100),
+                      constraints: BoxConstraints(
+                        maxWidth: isMobile ? double.infinity : 1100,
+                      ),
                       child: Card(
                         color: isDark ? const Color(0xFF232A36) : Colors.white,
                         elevation: 2,
-                        margin: const EdgeInsets.symmetric(
-                          vertical: 8,
-                          horizontal: 16,
+                        margin: EdgeInsets.symmetric(
+                          vertical: isMobile ? 4 : 8,
+                          horizontal: isMobile ? 8 : 16,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(
+                            isMobile ? 12 : 18,
+                          ),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 24,
-                            horizontal: 24,
-                          ),
+                          padding: EdgeInsets.all(isMobile ? 12 : 16),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "📊 후보별 감성 통계",
+                              Text(
+                                '후보별 뉴스 감성 분석',
                                 style: TextStyle(
-                                  fontSize: 20,
+                                  fontSize: isMobile ? 16 : 18,
                                   fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
                                 ),
                               ),
-                              const SizedBox(height: 18),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: List.generate(candidateList.length, (
-                                  i,
-                                ) {
-                                  final entry = candidateList[i];
-                                  final name = entry.key;
-                                  final data = Map<String, int>.from(
-                                    entry.value,
-                                  );
-                                  // 후보별 대표색, 공약 URL, 더미 공약 요약, 관련 뉴스 리스트 정의
-                                  Color color;
-                                  String pledgeUrl;
-                                  List<String> pledgeSummary;
-                                  switch (name) {
-                                    case '이재명':
-                                      color = const Color(0xFF1877F2);
-                                      pledgeUrl =
-                                          'https://theminjoo.kr/main/sub/news/list.php?sno=0&par=&&par=&brd=254';
-                                      pledgeSummary = [
-                                        '기본소득 도입',
-                                        '부동산 개혁',
-                                        '공정사회 실현',
-                                      ];
-                                      break;
-                                    case '김문수':
-                                      color = const Color(0xFFEF3340);
-                                      pledgeUrl =
-                                          'https://2025victory.kr/sub/?h_page=promise';
-                                      pledgeSummary = [
-                                        '경제 성장',
-                                        '안보 강화',
-                                        '복지 확대',
-                                      ];
-                                      break;
-                                    case '이준석':
-                                      color = const Color(0xFFFF9900);
-                                      pledgeUrl =
-                                          'https://www.reformparty.kr/policy';
-                                      pledgeSummary = [
-                                        '청년 정책',
-                                        '정치 개혁',
-                                        '미래산업 육성',
-                                      ];
-                                      break;
-                                    default:
-                                      color = Colors.grey;
-                                      pledgeUrl = '';
-                                      pledgeSummary = [];
-                                  }
-                                  final candidateNews =
-                                      newsList
-                                          .where(
-                                            (n) =>
-                                                n.title.contains(name) ||
-                                                n.summary.contains(name),
-                                          )
-                                          .map(
-                                            (n) => {
-                                              'title': n.title,
-                                              'summary': n.summary,
-                                              'sentiment': n.sentiment,
-                                              'url': n.url,
-                                              'published_date': n.publishedDate,
-                                              'source': n.source,
-                                            },
-                                          )
-                                          .toList();
-                                  return Expanded(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) =>
-                                                    CandidateDetailPage(
-                                                      candidate: name,
-                                                      news: candidateNews,
-                                                      themeMode:
-                                                          widget.themeMode,
-                                                      onToggleTheme:
-                                                          widget.onToggleTheme,
-                                                    ),
-                                          ),
-                                        );
-                                      },
-                                      child: MouseRegion(
-                                        onEnter:
-                                            (_) => setState(
-                                              () =>
-                                                  _hoveringStates[name] = true,
-                                            ),
-                                        onExit:
-                                            (_) => setState(
-                                              () =>
-                                                  _hoveringStates[name] = false,
-                                            ),
-                                        child: AnimatedContainer(
-                                          duration: const Duration(
-                                            milliseconds: 120,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                _hoveringStates[name] == true &&
-                                                        color != null
-                                                    ? color.withAlpha(
-                                                      isDark ? 217 : 46,
-                                                    )
-                                                    : _getCardColor(name),
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black26,
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 1),
-                                              ),
-                                            ],
-                                          ),
-                                          child: CandidatePieChart(
-                                            candidateName: name,
-                                            sentimentData: data,
-                                            hoverColor: color,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                              const SizedBox(height: 24),
-                              // 여론 흐름 요약 (마크다운 bold → TextSpan 강조)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(18),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isDark
-                                          ? const Color(0xFF1A1E26)
-                                          : const Color(0xFFF3F6FA),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: _MarkdownSummary(
-                                  trendSummary: trendSummary,
-                                  isDark: isDark,
-                                ),
+                              const SizedBox(height: 16),
+                              GridView.count(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                crossAxisCount: isMobile ? 1 : 3,
+                                mainAxisSpacing: isMobile ? 12 : 16,
+                                crossAxisSpacing: isMobile ? 0 : 16,
+                                childAspectRatio: isMobile ? 2.5 : 2.0,
+                                children:
+                                    candidateStats.entries.map((entry) {
+                                      final candidate = entry.key;
+                                      final stats = entry.value;
+                                      final total =
+                                          (stats['긍정'] as int) +
+                                          (stats['중립'] as int) +
+                                          (stats['부정'] as int);
+                                      return _buildCandidateCard(
+                                        candidate,
+                                        stats,
+                                        total,
+                                        isDark,
+                                        isMobile,
+                                      );
+                                    }).toList(),
                               ),
                             ],
                           ),
@@ -459,6 +362,163 @@ class _NewsPageState extends State<NewsPage> {
                   ),
                 ],
               ),
+    );
+  }
+
+  Widget _buildCandidateCard(
+    String candidate,
+    Map<String, dynamic> stats,
+    int total,
+    bool isDark,
+    bool isMobile,
+  ) {
+    final positive = stats['긍정'] as int;
+    final neutral = stats['중립'] as int;
+    final negative = stats['부정'] as int;
+
+    return Card(
+      color: isDark ? const Color(0xFF2A2F3A) : Colors.grey[50],
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
+        side: BorderSide(
+          color: isDark ? Colors.white12 : Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => CandidateDetailPage(
+                    candidate: candidate,
+                    news:
+                        widget.news
+                            .where(
+                              (article) =>
+                                  article['title'].contains(candidate) ||
+                                  article['summary'].contains(candidate),
+                            )
+                            .toList(),
+                    themeMode: widget.themeMode,
+                    onToggleTheme: widget.onToggleTheme,
+                  ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(isMobile ? 8 : 12),
+        child: Padding(
+          padding: EdgeInsets.all(isMobile ? 12 : 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          candidate,
+                          style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '총 $total개 기사',
+                          style: TextStyle(
+                            fontSize: isMobile ? 12 : 14,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                    size: isMobile ? 20 : 24,
+                  ),
+                ],
+              ),
+              if (total > 0) ...[
+                const SizedBox(height: isMobile ? 8 : 16),
+                Wrap(
+                  spacing: isMobile ? 4 : 8,
+                  runSpacing: isMobile ? 4 : 8,
+                  children: [
+                    _buildStatChip(
+                      '긍정',
+                      positive,
+                      Colors.green,
+                      isDark,
+                      isMobile,
+                    ),
+                    _buildStatChip(
+                      '중립',
+                      neutral,
+                      Colors.grey,
+                      isDark,
+                      isMobile,
+                    ),
+                    _buildStatChip(
+                      '부정',
+                      negative,
+                      Colors.red,
+                      isDark,
+                      isMobile,
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatChip(
+    String label,
+    int count,
+    Color color,
+    bool isDark,
+    bool isMobile,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 8 : 12,
+        vertical: isMobile ? 4 : 6,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? color.withOpacity(0.2) : color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: isMobile ? 8 : 10,
+            height: isMobile ? 8 : 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          SizedBox(width: isMobile ? 4 : 6),
+          Text(
+            '$label $count',
+            style: TextStyle(
+              fontSize: isMobile ? 12 : 14,
+              color: isDark ? color.withOpacity(0.9) : color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

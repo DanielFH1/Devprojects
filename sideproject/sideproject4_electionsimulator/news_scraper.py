@@ -186,31 +186,16 @@ class NewsAnalyzer:
             logger.error(f"감성 분석 실패: {str(e)}")
             return "중립"
 
-    @backoff.on_exception(
-        backoff.expo,
-        (openai.RateLimitError, openai.APIError, openai.AuthenticationError),
-        max_tries=3,
-        max_time=30
-    )
-    def analyze_trends(self, news_data: List[Dict[str, Any]], time_range: str) -> Dict[str, Any]:
-        """트렌드 분석"""
-        system_msg = "당신은 대선 뉴스를 분석하는 정치 전략가입니다."
+    def _summarize_news_batch(self, news_batch: List[Dict[str, Any]], batch_num: int, total_batches: int) -> str:
+        """뉴스 배치 요약 (Map 단계)"""
+        system_msg = "당신은 대선 뉴스를 분석하는 정치 전략가입니다. 주어진 뉴스들을 상세하게 분석해주세요."
         
-        # 후보별 감성 통계 계산
-        candidate_stats = defaultdict(lambda: {"긍정": 0, "부정": 0, "중립": 0})
-        for news in news_data:
-            for candidate in self.candidate_list:
-                if candidate in news['title'] or candidate in news['summary']:
-                    sentiment = news['sentiment']
-                    candidate_stats[candidate][sentiment] += 1
-
-        # 트렌드 요약 생성
         news_list_str = "\n\n".join([
             f"{i+1}. 제목: {news['title']}\n요약: {news['summary']}\n감성: {news['sentiment']}"
-            for i, news in enumerate(news_data)
+            for i, news in enumerate(news_batch)
         ])
 
-        user_msg = f"""아래는 {time_range} 동안 수집된 대선 관련 뉴스 요약과 감성 분석 결과입니다:\n\n{news_list_str}\n\n이 뉴스들을 종합해볼 때, 최근 여론 흐름을 분석해줘. 후보자별 이미지, 주요 이슈, 감성 트렌드 등을 알려줘."""
+        user_msg = f"""아래는 전체 {total_batches}개 배치 중 {batch_num}번째 배치의 뉴스입니다:\n\n{news_list_str}\n\n이 뉴스들을 상세하게 분석해주세요. 다음 항목들을 포함해주세요:\n1. 주요 이슈와 키워드\n2. 후보자별 언급 빈도와 이미지\n3. 긍정/부정/중립 기사의 비율\n4. 특이사항이나 주목할 만한 트렌드"""
 
         try:
             response = openai.chat.completions.create(
@@ -221,13 +206,66 @@ class NewsAnalyzer:
                 ],
                 temperature=0.5
             )
-            trend_summary = response.choices[0].message.content.strip()
+            return response.choices[0].message.content.strip()
         except Exception as e:
-            logger.error(f"트렌드 분석 실패: {str(e)}")
-            trend_summary = "트렌드 분석을 수행할 수 없습니다."
+            logger.error(f"배치 {batch_num} 요약 실패: {str(e)}")
+            return f"배치 {batch_num} 분석 실패"
 
+    def _create_final_summary(self, batch_summaries: List[str], time_range: str) -> str:
+        """최종 요약 생성 (Reduce 단계)"""
+        system_msg = "당신은 대선 뉴스를 종합 분석하는 정치 전략가입니다. 여러 배치의 분석 결과를 종합하여 최종 트렌드를 도출해주세요."
+        
+        summaries_str = "\n\n=== 배치별 분석 ===\n\n" + "\n\n".join([
+            f"[배치 {i+1} 분석]\n{summary}"
+            for i, summary in enumerate(batch_summaries)
+        ])
+
+        user_msg = f"""아래는 {time_range} 동안 수집된 뉴스를 여러 배치로 나누어 분석한 결과입니다:\n\n{summaries_str}\n\n이 분석 결과들을 종합하여 다음 항목들을 포함한 최종 트렌드 분석을 제공해주세요:\n1. 전체적인 여론 동향\n2. 후보자별 이미지와 지지율 변화 추이\n3. 주요 이슈와 키워드의 변화\n4. 향후 전망"""
+
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=[
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg}
+                ],
+                temperature=0.5
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"최종 요약 생성 실패: {str(e)}")
+            return "최종 트렌드 분석을 수행할 수 없습니다."
+
+    def analyze_trends(self, news_data: List[Dict[str, Any]], time_range: str) -> Dict[str, Any]:
+        """트렌드 분석 (Map-Reduce 방식)"""
+        # 후보별 감성 통계 계산
+        candidate_stats = defaultdict(lambda: {"긍정": 0, "부정": 0, "중립": 0})
+        for news in news_data:
+            for candidate in self.candidate_list:
+                if candidate in news['title'] or candidate in news['summary']:
+                    sentiment = news['sentiment']
+                    candidate_stats[candidate][sentiment] += 1
+
+        # 뉴스 데이터를 50개씩 배치로 나누기
+        batch_size = 50
+        batches = [news_data[i:i + batch_size] for i in range(0, len(news_data), batch_size)]
+        total_batches = len(batches)
+        
+        logger.info(f"📊 {total_batches}개 배치로 나누어 분석 시작...")
+        
+        # Map 단계: 각 배치별 요약
+        batch_summaries = []
+        for i, batch in enumerate(batches, 1):
+            logger.info(f"🔄 배치 {i}/{total_batches} 분석 중...")
+            summary = self._summarize_news_batch(batch, i, total_batches)
+            batch_summaries.append(summary)
+        
+        # Reduce 단계: 최종 요약 생성
+        logger.info("🔄 최종 요약 생성 중...")
+        final_summary = self._create_final_summary(batch_summaries, time_range)
+        
         return {
-            "trend_summary": trend_summary,
+            "trend_summary": final_summary,
             "candidate_stats": dict(candidate_stats),
             "total_articles": len(news_data),
             "time_range": time_range

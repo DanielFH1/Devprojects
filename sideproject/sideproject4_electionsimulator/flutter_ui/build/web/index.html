@@ -37,7 +37,10 @@
       content="AI 기반 뉴스 분석과 여론 조사를 통한 실시간 대선 예측 플랫폼. 후보자별 지지율, 뉴스 트렌드, 감성 분석을 제공합니다."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://your-render-domain.onrender.com" />
+    <meta
+      property="og:url"
+      content="https://electionsimulatorwebservice.onrender.com"
+    />
     <meta property="og:image" content="icons/Icon-512.png" />
 
     <!-- iOS meta tags & icons -->
@@ -46,13 +49,42 @@
     <meta name="apple-mobile-web-app-title" content="flutter_ui" />
     <link rel="apple-touch-icon" href="icons/Icon-192.png" />
 
+    <!-- 모바일 최적화를 위한 메타 태그 -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#232A36" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png" />
 
     <title>대선 예측 시뮬레이터 - AI 기반 실시간 대선 분석</title>
     <link rel="manifest" href="manifest.json" />
+
+    <script>
+      // The value below is injected by flutter build, do not touch.
+      const serviceWorkerVersion = "1444701502";
+    </script>
+    <!-- This script adds the flutter initialization JS code -->
+    <script src="flutter.js" defer></script>
   </head>
   <body>
-    <script src="flutter_bootstrap.js" async></script>
+    <script>
+      window.addEventListener("load", function (ev) {
+        // Download main.dart.js
+        _flutter.loader.loadEntrypoint({
+          serviceWorker: {
+            serviceWorkerVersion: serviceWorkerVersion,
+          },
+          onEntrypointLoaded: function (engineInitializer) {
+            engineInitializer.initializeEngine().then(function (appRunner) {
+              appRunner.runApp();
+            });
+          },
+        });
+      });
+    </script>
   </body>
 </html>
