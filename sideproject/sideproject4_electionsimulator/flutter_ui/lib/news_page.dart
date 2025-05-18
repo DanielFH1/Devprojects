@@ -395,11 +395,21 @@ class _NewsPageState extends State<NewsPage> {
                   (context) => CandidateDetailPage(
                     candidate: candidate,
                     news:
-                        widget.news
+                        newsList
                             .where(
                               (article) =>
-                                  article['title'].contains(candidate) ||
-                                  article['summary'].contains(candidate),
+                                  article.title.contains(candidate) ||
+                                  article.summary.contains(candidate),
+                            )
+                            .map(
+                              (article) => {
+                                'title': article.title,
+                                'summary': article.summary,
+                                'url': article.url,
+                                'published_date': article.publishedDate,
+                                'source': article.source,
+                                'sentiment': article.sentiment,
+                              },
                             )
                             .toList(),
                     themeMode: widget.themeMode,
@@ -448,7 +458,7 @@ class _NewsPageState extends State<NewsPage> {
                 ],
               ),
               if (total > 0) ...[
-                const SizedBox(height: isMobile ? 8 : 16),
+                SizedBox(height: isMobile ? 8 : 16),
                 Wrap(
                   spacing: isMobile ? 4 : 8,
                   runSpacing: isMobile ? 4 : 8,
