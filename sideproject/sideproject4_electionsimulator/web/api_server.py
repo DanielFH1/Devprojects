@@ -257,14 +257,15 @@ async def startup_event():
         logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
     
     # 스케줄러 설정
-    schedule.every(1).hours.do(run_news_pipeline)  # 1시간마다 뉴스 수집
-    schedule.every().day.at("06:00").do(lambda: news_cache.pipeline.analyzer.analyze_trends(news_cache.pipeline.temp_storage, "전일"))  # 매일 오전 6시에 트렌드 분석
+    # 1시간마다 수행하던 뉴스 수집을 매일 오전 6시에만 수행하도록 변경
+    schedule.every().day.at("06:00").do(run_news_pipeline)  # 매일 오전 6시에 뉴스 수집 및 분석
+    schedule.every().day.at("06:10").do(lambda: news_cache.pipeline.analyzer.analyze_trends(news_cache.pipeline.temp_storage, "전일"))  # 매일 오전 6시 10분에 트렌드 분석
     schedule.every(5).minutes.do(update_news_cache)  # 캐시 업데이트는 5분마다 유지
     
     # 백그라운드 스레드에서 스케줄러 실행
     scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
     scheduler_thread.start()
-    logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다.")
+    logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다. 매일 오전 6시에 데이터가 갱신됩니다.")
 
 # --- Flutter 웹 앱 제공 ---
 if not FLUTTER_BUILD_DIR.exists() or not (FLUTTER_BUILD_DIR / "index.html").exists():

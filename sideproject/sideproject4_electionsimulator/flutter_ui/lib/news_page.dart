@@ -231,16 +231,30 @@ class _NewsPageState extends State<NewsPage> {
         systemOverlayStyle:
             isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(isMobile ? 32 : 40),
+          preferredSize: Size.fromHeight(isMobile ? 48 : 56),
           child: Container(
-            padding: EdgeInsets.only(bottom: isMobile ? 4 : 8),
-            child: Text(
-              '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
-              style: TextStyle(
-                fontSize: isMobile ? 11 : 13,
-                color: isDark ? Colors.white60 : Colors.black54,
-              ),
-              textAlign: TextAlign.center,
+            padding: EdgeInsets.only(bottom: isMobile ? 8 : 12),
+            child: Column(
+              children: [
+                Text(
+                  '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
+                  style: TextStyle(
+                    fontSize: isMobile ? 11 : 13,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '데이터는 매일 오전 6시에 갱신됩니다.',
+                  style: TextStyle(
+                    fontSize: isMobile ? 10 : 12,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.amber[200] : Colors.indigo,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),

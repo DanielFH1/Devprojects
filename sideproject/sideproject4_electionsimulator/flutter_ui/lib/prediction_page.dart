@@ -210,56 +210,32 @@ class _PredictionPageState extends State<PredictionPage>
       backgroundColor:
           isDark ? const Color(0xFF181C23) : const Color(0xFFF7F8FA),
       appBar: AppBar(
-        title: Text(
-          'AI 예측 최종 득표율',
-          style: TextStyle(
-            fontSize: isSmallMobile ? 16 : (isMobile ? 18 : 20),
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
         backgroundColor: isDark ? const Color(0xFF232A36) : Colors.white,
-        elevation: isDark ? 0.5 : 2,
-        shadowColor: isDark ? Colors.black26 : Colors.black12,
-        surfaceTintColor: isDark ? null : Colors.white,
+        title: const Text(
+          'AI 예측 득표율',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
-          if (!isSmallMobile)
-            MouseRegion(
-              onEnter: (_) => setState(() => _isHoveringRefresh = true),
-              onExit: (_) => setState(() => _isHoveringRefresh = false),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                transform:
-                    Matrix4.identity()
-                      ..translate(0.0, _isHoveringRefresh ? -2.0 : 0.0),
-                child: IconButton(
-                  icon: Icon(
-                    Icons.refresh_rounded,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                  onPressed: _refreshData,
-                  tooltip: '데이터 새로고침',
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: Icon(
-                Icons.refresh_rounded,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-              onPressed: _refreshData,
-              tooltip: '데이터 새로고침',
-            ),
           IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
             onPressed: widget.onToggleTheme,
-            tooltip: isDark ? '라이트모드' : '다크모드',
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(40),
+          child: Container(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: const Text(
+              '데이터는 매일 오전 6시에 갱신됩니다.',
+              style: TextStyle(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
       ),
       body: FadeTransition(
         opacity: _fadeAnimation,
