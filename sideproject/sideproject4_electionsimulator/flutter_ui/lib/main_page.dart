@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'candidate_detail_page.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class MainPage extends StatefulWidget {
   final ThemeMode? themeMode;
@@ -74,8 +75,8 @@ class _MainPageState extends State<MainPage>
         };
 
         // 전체 뉴스 데이터에서 후보자별 뉴스 분류
-        if (newsData['articles'] != null) {
-          for (var article in newsData['articles']) {
+        if (newsData['news_list'] != null) {
+          for (var article in newsData['news_list']) {
             final title = article['title'] as String;
             final summary = article['summary'] as String? ?? '';
             final content = '$title $summary'.toLowerCase();
@@ -234,18 +235,22 @@ class _MainPageState extends State<MainPage>
 
     return Scaffold(
       backgroundColor:
-          isDark ? const Color(0xFF181C23) : const Color(0xFFF7F8FA),
+          isDark ? const Color(0xFF141921) : const Color(0xFFFCFCFF),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF232A36) : Colors.white,
-        elevation: isDark ? 0.5 : 2,
+        backgroundColor: isDark ? const Color(0xFF1A202C) : Colors.white,
+        elevation: 0,
         shadowColor: isDark ? Colors.black26 : Colors.black12,
         surfaceTintColor: isDark ? null : Colors.white,
-        title: Text(
-          '대선 트렌드 분석',
-          style: TextStyle(
-            fontSize: isMobile ? 18 : 20,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Colors.black87,
+        title: Padding(
+          padding: const EdgeInsets.only(left: 8.0),
+          child: Text(
+            '대선 트렌드 분석',
+            style: TextStyle(
+              fontSize: isMobile ? 18 : 20,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+              letterSpacing: -0.5,
+            ),
           ),
         ),
         actions: [
@@ -260,20 +265,23 @@ class _MainPageState extends State<MainPage>
               child: IconButton(
                 icon: Icon(
                   Icons.refresh_rounded,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: isDark ? Colors.white70 : Colors.black54,
                 ),
                 onPressed: _refreshNews,
                 tooltip: '뉴스 새로고침',
               ),
             ),
           ),
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode,
-              color: isDark ? Colors.white : Colors.black87,
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: IconButton(
+              icon: Icon(
+                isDark ? Icons.light_mode : Icons.dark_mode,
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+              onPressed: widget.onToggleTheme,
+              tooltip: isDark ? '라이트모드' : '다크모드',
             ),
-            onPressed: widget.onToggleTheme,
-            tooltip: isDark ? '라이트모드' : '다크모드',
           ),
         ],
       ),
@@ -288,19 +296,26 @@ class _MainPageState extends State<MainPage>
             ),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
+                constraints: const BoxConstraints(maxWidth: 900),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 트렌드 요약 카드
                     Card(
-                      color: isDark ? const Color(0xFF232A36) : Colors.white,
-                      elevation: 2,
+                      color: isDark ? const Color(0xFF1A202C) : Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color:
+                              isDark
+                                  ? Colors.white.withOpacity(0.05)
+                                  : Colors.grey.withOpacity(0.1),
+                          width: 1,
+                        ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(24.0),
+                        padding: const EdgeInsets.all(28.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -310,15 +325,17 @@ class _MainPageState extends State<MainPage>
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: (isDark
-                                            ? Colors.white
-                                            : Colors.black)
+                                            ? Colors.blue
+                                            : const Color(0xFF4361EE))
                                         .withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
-                                    Icons.trending_up_rounded,
+                                    Icons.insights_rounded,
                                     color:
-                                        isDark ? Colors.white : Colors.black87,
+                                        isDark
+                                            ? Colors.blue
+                                            : const Color(0xFF4361EE),
                                     size: 24,
                                   ),
                                 ),
@@ -328,12 +345,16 @@ class _MainPageState extends State<MainPage>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
-                                        '최근 트렌드 요약',
+                                      Text(
+                                        '최근 트렌드 분석',
                                         style: TextStyle(
                                           fontSize: 20,
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w600,
                                           letterSpacing: -0.5,
+                                          color:
+                                              isDark
+                                                  ? Colors.white
+                                                  : Colors.black87,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
@@ -343,8 +364,8 @@ class _MainPageState extends State<MainPage>
                                           fontSize: 14,
                                           color:
                                               isDark
-                                                  ? Colors.white70
-                                                  : Colors.black54,
+                                                  ? Colors.white60
+                                                  : Colors.black45,
                                         ),
                                       ),
                                     ],
@@ -352,31 +373,68 @@ class _MainPageState extends State<MainPage>
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
-                            Text(
-                              trendSummary,
-                              style: TextStyle(
-                                fontSize: 15,
-                                height: 1.6,
-                                color: isDark ? Colors.white70 : Colors.black87,
+                            const SizedBox(height: 24),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 20,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    isDark
+                                        ? Colors.white.withOpacity(0.03)
+                                        : Colors.grey.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                trendSummary,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  height: 1.7,
+                                  color:
+                                      isDark ? Colors.white70 : Colors.black87,
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 36),
                     // 후보별 통계
-                    Text(
-                      '후보별 뉴스 통계',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                        letterSpacing: -0.5,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color:
+                                isDark ? Colors.white : const Color(0xFF4361EE),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '후보별 뉴스 통계',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '뉴스감성분석은 매일 오전 6시에 이루어집니다.',
+                          style: TextStyle(
+                            fontSize: isMobile ? 11 : 13,
+                            color: isDark ? Colors.white60 : Colors.black54,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     // 후보 카드들
                     ...['이재명', '김문수', '이준석'].map((candidate) {
                       final stats =
@@ -394,10 +452,17 @@ class _MainPageState extends State<MainPage>
                           tag: 'candidate_$candidate',
                           child: Card(
                             color:
-                                isDark ? const Color(0xFF232A36) : Colors.white,
-                            elevation: 1,
+                                isDark ? const Color(0xFF1A202C) : Colors.white,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color:
+                                    isDark
+                                        ? Colors.white.withOpacity(0.05)
+                                        : Colors.grey.withOpacity(0.1),
+                                width: 1,
+                              ),
                             ),
                             child: InkWell(
                               onTap: () {
@@ -438,7 +503,7 @@ class _MainPageState extends State<MainPage>
                               },
                               borderRadius: BorderRadius.circular(16),
                               child: Padding(
-                                padding: const EdgeInsets.all(20.0),
+                                padding: const EdgeInsets.all(24.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -452,10 +517,14 @@ class _MainPageState extends State<MainPage>
                                               0.1,
                                             ),
                                             shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: candidateColor,
-                                              width: 2,
-                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: candidateColor
+                                                    .withOpacity(0.2),
+                                                blurRadius: 10,
+                                                spreadRadius: 0,
+                                              ),
+                                            ],
                                           ),
                                           child: Center(
                                             child: Text(
@@ -468,7 +537,7 @@ class _MainPageState extends State<MainPage>
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 16),
+                                        const SizedBox(width: 20),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
@@ -476,58 +545,130 @@ class _MainPageState extends State<MainPage>
                                             children: [
                                               Text(
                                                 candidate,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontSize: 18,
-                                                  fontWeight: FontWeight.bold,
+                                                  fontWeight: FontWeight.w600,
                                                   letterSpacing: -0.3,
+                                                  color:
+                                                      isDark
+                                                          ? Colors.white
+                                                          : Colors.black87,
                                                 ),
                                               ),
-                                              const SizedBox(height: 4),
+                                              const SizedBox(height: 6),
                                               Text(
                                                 '총 $total개 기사',
                                                 style: TextStyle(
                                                   fontSize: 14,
                                                   color:
                                                       isDark
-                                                          ? Colors.white70
-                                                          : Colors.black54,
+                                                          ? Colors.white60
+                                                          : Colors.black45,
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        Icon(
-                                          Icons.arrow_forward_rounded,
-                                          color:
-                                              isDark
-                                                  ? Colors.white60
-                                                  : Colors.black54,
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                isDark
+                                                    ? Colors.white.withOpacity(
+                                                      0.05,
+                                                    )
+                                                    : Colors.grey.withOpacity(
+                                                      0.05,
+                                                    ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(
+                                            Icons.arrow_forward_rounded,
+                                            color:
+                                                isDark
+                                                    ? Colors.white60
+                                                    : Colors.black45,
+                                            size: 20,
+                                          ),
                                         ),
                                       ],
                                     ),
                                     if (total > 0) ...[
-                                      const SizedBox(height: 16),
+                                      const SizedBox(height: 24),
                                       Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
                                         children: [
-                                          _buildStatChip(
-                                            '긍정',
-                                            positive,
-                                            Colors.green,
-                                            isDark,
+                                          Expanded(
+                                            child: Row(
+                                              children: [
+                                                _buildStatChip(
+                                                  '긍정',
+                                                  positive,
+                                                  const Color(0xFF4CAF50),
+                                                  isDark,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                _buildStatChip(
+                                                  '중립',
+                                                  neutral,
+                                                  const Color(0xFF607D8B),
+                                                  isDark,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                _buildStatChip(
+                                                  '부정',
+                                                  negative,
+                                                  const Color(0xFFF44336),
+                                                  isDark,
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                          const SizedBox(width: 8),
-                                          _buildStatChip(
-                                            '중립',
-                                            neutral,
-                                            Colors.grey,
-                                            isDark,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          _buildStatChip(
-                                            '부정',
-                                            negative,
-                                            Colors.red,
-                                            isDark,
+                                          SizedBox(
+                                            height: 80,
+                                            width: 80,
+                                            child: PieChart(
+                                              PieChartData(
+                                                sectionsSpace: 2,
+                                                centerSpaceRadius: 20,
+                                                sections: [
+                                                  PieChartSectionData(
+                                                    value: positive.toDouble(),
+                                                    color: const Color(
+                                                      0xFF4CAF50,
+                                                    ),
+                                                    radius: 15,
+                                                    title: '',
+                                                    titleStyle: const TextStyle(
+                                                      fontSize: 0,
+                                                    ),
+                                                  ),
+                                                  PieChartSectionData(
+                                                    value: neutral.toDouble(),
+                                                    color: const Color(
+                                                      0xFF607D8B,
+                                                    ),
+                                                    radius: 15,
+                                                    title: '',
+                                                    titleStyle: const TextStyle(
+                                                      fontSize: 0,
+                                                    ),
+                                                  ),
+                                                  PieChartSectionData(
+                                                    value: negative.toDouble(),
+                                                    color: const Color(
+                                                      0xFFF44336,
+                                                    ),
+                                                    radius: 15,
+                                                    title: '',
+                                                    titleStyle: const TextStyle(
+                                                      fontSize: 0,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -540,62 +681,95 @@ class _MainPageState extends State<MainPage>
                         ),
                       );
                     }),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 36),
                     // 감성 필터
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children:
-                            _sentimentFilters.map((sentiment) {
-                              final isSelected =
-                                  _selectedSentiment == sentiment;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: FilterChip(
-                                  selected: isSelected,
-                                  label: Text(sentiment),
-                                  labelStyle: TextStyle(
-                                    color:
-                                        isSelected
-                                            ? Colors.white
-                                            : isDark
-                                            ? Colors.white70
-                                            : Colors.black87,
-                                    fontWeight:
-                                        isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                  ),
-                                  backgroundColor:
-                                      isDark
-                                          ? const Color(0xFF2A2F3A)
-                                          : Colors.grey[100],
-                                  selectedColor: _getSentimentColor(sentiment),
-                                  checkmarkColor: Colors.white,
-                                  onSelected: (selected) {
-                                    if (selected) {
-                                      setState(
-                                        () => _selectedSentiment = sentiment,
-                                      );
-                                    }
-                                  },
-                                ),
-                              );
-                            }).toList(),
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 20,
+                          decoration: BoxDecoration(
+                            color:
+                                isDark ? Colors.white : const Color(0xFF4361EE),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '취합된 기사 목록',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '감성 필터:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children:
+                                _sentimentFilters.map((sentiment) {
+                                  final isSelected =
+                                      _selectedSentiment == sentiment;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: FilterChip(
+                                      selected: isSelected,
+                                      label: Text(sentiment),
+                                      labelStyle: TextStyle(
+                                        color:
+                                            isSelected
+                                                ? Colors.white
+                                                : isDark
+                                                ? Colors.white70
+                                                : Colors.black87,
+                                        fontWeight:
+                                            isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                        fontSize: 13,
+                                      ),
+                                      backgroundColor:
+                                          isDark
+                                              ? const Color(0xFF232836)
+                                              : Colors.grey[100],
+                                      selectedColor: _getSentimentFilterColor(
+                                        sentiment,
+                                      ),
+                                      checkmarkColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                        vertical: 0,
+                                      ),
+                                      onSelected: (selected) {
+                                        if (selected) {
+                                          setState(
+                                            () =>
+                                                _selectedSentiment = sentiment,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     // 전체 뉴스 목록
-                    Text(
-                      '취합된 기사 목록',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     ..._getFilteredNews(
                       (newsData?['news_list'] as List<dynamic>? ?? [])
                           .map((article) => Map<String, dynamic>.from(article))
@@ -607,10 +781,17 @@ class _MainPageState extends State<MainPage>
                           tag: 'news_${article['url']}',
                           child: Card(
                             color:
-                                isDark ? const Color(0xFF232A36) : Colors.white,
-                            elevation: 1,
+                                isDark ? const Color(0xFF1A202C) : Colors.white,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(
+                                color:
+                                    isDark
+                                        ? Colors.white.withOpacity(0.05)
+                                        : Colors.grey.withOpacity(0.1),
+                                width: 1,
+                              ),
                             ),
                             child: InkWell(
                               onTap: () async {
@@ -632,29 +813,47 @@ class _MainPageState extends State<MainPage>
                               },
                               borderRadius: BorderRadius.circular(16),
                               child: Padding(
-                                padding: const EdgeInsets.all(20.0),
+                                padding: const EdgeInsets.all(24.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       article['title'] as String,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 17,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w600,
                                         letterSpacing: -0.3,
                                         height: 1.4,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      article['summary'] as String,
-                                      style: TextStyle(
-                                        fontSize: 15,
                                         color:
                                             isDark
-                                                ? Colors.white70
+                                                ? Colors.white
                                                 : Colors.black87,
-                                        height: 1.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                        horizontal: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            isDark
+                                                ? Colors.white.withOpacity(0.03)
+                                                : Colors.grey.withOpacity(0.05),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        article['summary'] as String,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color:
+                                              isDark
+                                                  ? Colors.white70
+                                                  : Colors.black87,
+                                          height: 1.5,
+                                          letterSpacing: -0.2,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 16),
@@ -670,7 +869,12 @@ class _MainPageState extends State<MainPage>
                                               article['sentiment'] as String,
                                             ).withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(
-                                              10,
+                                              12,
+                                            ),
+                                            border: Border.all(
+                                              color: _getSentimentColor(
+                                                article['sentiment'] as String,
+                                              ).withOpacity(0.2),
                                             ),
                                           ),
                                           child: Text(
@@ -686,12 +890,12 @@ class _MainPageState extends State<MainPage>
                                         ),
                                         const SizedBox(width: 12),
                                         Icon(
-                                          Icons.newspaper_outlined,
+                                          Icons.newspaper_rounded,
                                           size: 14,
                                           color:
                                               isDark
                                                   ? Colors.white60
-                                                  : Colors.black54,
+                                                  : Colors.black45,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
@@ -701,7 +905,7 @@ class _MainPageState extends State<MainPage>
                                             color:
                                                 isDark
                                                     ? Colors.white60
-                                                    : Colors.black54,
+                                                    : Colors.black45,
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -711,7 +915,7 @@ class _MainPageState extends State<MainPage>
                                           color:
                                               isDark
                                                   ? Colors.white60
-                                                  : Colors.black54,
+                                                  : Colors.black45,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
@@ -721,7 +925,7 @@ class _MainPageState extends State<MainPage>
                                             color:
                                                 isDark
                                                     ? Colors.white60
-                                                    : Colors.black54,
+                                                    : Colors.black45,
                                           ),
                                         ),
                                       ],
@@ -746,11 +950,11 @@ class _MainPageState extends State<MainPage>
 
   Widget _buildStatChip(String label, int count, Color color, bool isDark) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -763,13 +967,20 @@ class _MainPageState extends State<MainPage>
               color: color,
             ),
           ),
-          const SizedBox(width: 4),
-          Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.black26 : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -780,13 +991,26 @@ class _MainPageState extends State<MainPage>
   Color _getCandidateColor(String candidate) {
     switch (candidate) {
       case '이재명':
-        return const Color(0xFF1877F2);
+        return const Color(0xFF4361EE);
       case '김문수':
-        return const Color(0xFFEF3340);
+        return const Color(0xFFE63946);
       case '이준석':
-        return const Color(0xFFFF9900);
+        return const Color(0xFFFF9F1C);
       default:
         return Colors.grey;
+    }
+  }
+
+  Color _getSentimentFilterColor(String sentiment) {
+    switch (sentiment.trim()) {
+      case "긍정":
+        return const Color(0xFF4CAF50);
+      case "부정":
+        return const Color(0xFFF44336);
+      case "중립":
+        return const Color(0xFF607D8B);
+      default:
+        return const Color(0xFF4361EE);
     }
   }
 }

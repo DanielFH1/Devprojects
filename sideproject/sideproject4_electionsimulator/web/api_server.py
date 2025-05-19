@@ -54,7 +54,8 @@ if not DEFAULT_DATA_FILE.exists():
                 "이준석": {"긍정": 0, "부정": 0, "중립": 0}
             },
             "total_articles": 0,
-            "time_range": "데이터 수집 중"
+            "time_range": "데이터 수집 중",
+            "news_list": []  # 빈 뉴스 리스트 추가
         }
         with open(DEFAULT_DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(default_data, f, ensure_ascii=False, indent=2)
@@ -136,7 +137,8 @@ def update_news_cache():
                         "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                     }),
                     "total_articles": data.get("total_articles", 0),
-                    "time_range": data.get("time_range", "데이터 수집 중")
+                    "time_range": data.get("time_range", "데이터 수집 중"),
+                    "news_list": data.get("news_list", [])  # news_list 필드 추가
                 }
                 news_cache.update(processed_data)
                 logger.info(f"✅ 뉴스 캐시 업데이트 완료: {news_files[0].name}")
@@ -192,7 +194,8 @@ async def get_news_data():
                             "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                         },
                         "total_articles": 0,
-                        "time_range": "데이터 수집 중"
+                        "time_range": "데이터 수집 중",
+                        "news_list": []  # 빈 뉴스 리스트 추가
                     }
                 return {
                     "data": default_data,
@@ -203,6 +206,10 @@ async def get_news_data():
                     }
                 }
         
+        # news_list 필드가 없으면 빈 배열 추가
+        if "news_list" not in news_cache.latest_data:
+            news_cache.latest_data["news_list"] = []
+            
         return {
             "data": news_cache.latest_data,
             "metadata": {
@@ -251,7 +258,7 @@ async def startup_event():
     
     # 스케줄러 설정
     schedule.every(1).hours.do(run_news_pipeline)  # 1시간마다 뉴스 수집
-    schedule.every().day.at("06:00").do(lambda: pipeline.analyzer.analyze_trends(pipeline.temp_storage, "전일"))  # 매일 오전 6시에 트렌드 분석
+    schedule.every().day.at("06:00").do(lambda: news_cache.pipeline.analyzer.analyze_trends(news_cache.pipeline.temp_storage, "전일"))  # 매일 오전 6시에 트렌드 분석
     schedule.every(5).minutes.do(update_news_cache)  # 캐시 업데이트는 5분마다 유지
     
     # 백그라운드 스레드에서 스케줄러 실행
@@ -277,12 +284,35 @@ if not FLUTTER_BUILD_DIR.exists() or not (FLUTTER_BUILD_DIR / "index.html").exis
 else:
     @app.get("/")
     async def root():
-        return FileResponse(FLUTTER_BUILD_DIR / "index.html")
+        return FileResponse(str(FLUTTER_BUILD_DIR / "index.html"))
 
-    # 정적 파일 제공
-    app.mount("/assets", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "assets")), name="flutter_assets")
-    app.mount("/icons", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "icons")), name="flutter_icons")
-    app.mount("/canvaskit", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "canvaskit")), name="flutter_canvaskit")
+    # 정적 파일 제공 - 각 디렉토리가 존재하는 경우에만 마운트
+    try:
+        if (FLUTTER_BUILD_DIR / "assets").exists():
+            app.mount("/assets", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "assets")), name="flutter_assets")
+            logger.info(f"✅ Flutter assets 디렉토리 마운트 완료: {FLUTTER_BUILD_DIR / 'assets'}")
+        else:
+            logger.warning(f"⚠️ Flutter assets 디렉토리를 찾을 수 없습니다: {FLUTTER_BUILD_DIR / 'assets'}")
+    except Exception as e:
+        logger.error(f"❌ assets 디렉토리 마운트 실패: {str(e)}")
+    
+    try:
+        if (FLUTTER_BUILD_DIR / "icons").exists():
+            app.mount("/icons", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "icons")), name="flutter_icons")
+            logger.info(f"✅ Flutter icons 디렉토리 마운트 완료: {FLUTTER_BUILD_DIR / 'icons'}")
+        else:
+            logger.warning(f"⚠️ Flutter icons 디렉토리를 찾을 수 없습니다: {FLUTTER_BUILD_DIR / 'icons'}")
+    except Exception as e:
+        logger.error(f"❌ icons 디렉토리 마운트 실패: {str(e)}")
+    
+    try:
+        if (FLUTTER_BUILD_DIR / "canvaskit").exists():
+            app.mount("/canvaskit", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "canvaskit")), name="flutter_canvaskit")
+            logger.info(f"✅ Flutter canvaskit 디렉토리 마운트 완료: {FLUTTER_BUILD_DIR / 'canvaskit'}")
+        else:
+            logger.warning(f"⚠️ Flutter canvaskit 디렉토리를 찾을 수 없습니다: {FLUTTER_BUILD_DIR / 'canvaskit'}")
+    except Exception as e:
+        logger.error(f"❌ canvaskit 디렉토리 마운트 실패: {str(e)}")
     
     @app.get("/{path:path}")
     async def serve_flutter_web(path: str):

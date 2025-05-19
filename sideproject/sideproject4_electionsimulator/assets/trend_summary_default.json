@@ -18,5 +18,6 @@
     }
   },
   "total_articles": 0,
-  "time_range": "데이터 수집 중"
+  "time_range": "데이터 수집 중",
+  "news_list": []
 }

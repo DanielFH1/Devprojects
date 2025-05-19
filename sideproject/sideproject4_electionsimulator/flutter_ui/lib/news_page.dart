@@ -148,7 +148,7 @@ class _NewsPageState extends State<NewsPage> {
         shadowColor: isDark ? Colors.black26 : Colors.black12,
         surfaceTintColor: isDark ? null : Colors.white,
         title: Text(
-          isMobile ? '대선 시뮬레이터' : '2025년 21대 대선 시뮬레이터',
+          isMobile ? '대선 시뮬레이터' : '2025 21대 대선 시뮬레이터',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: isSmallMobile ? 18 : (isMobile ? 20 : 22),
@@ -341,7 +341,7 @@ class _NewsPageState extends State<NewsPage> {
                         ),
                         child: ExpansionTile(
                           title: const Text(
-                            '📊 취합된 뉴스 기사 목록',
+                            '📊 취합된 뉴스 기사 목록 일부',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
