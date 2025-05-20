@@ -162,7 +162,7 @@ class _NewsPageState extends State<NewsPage> {
         shadowColor: isDark ? Colors.black26 : Colors.black12,
         surfaceTintColor: isDark ? null : Colors.white,
         title: Text(
-          isMobile ? '대선 시뮬레이터' : '2025 21대 대선 시뮬레이터',
+          isMobile ? '대선 시뮬레이터' : '2025__21대 대선 시뮬레이터',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: titleFontSize,
