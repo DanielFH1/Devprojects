@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Flutter 설치 디렉토리
-FLUTTER_HOME="/opt/flutter"
+# Flutter 설치 디렉토리 (Render.com 환경에 맞게 수정)
+FLUTTER_HOME="$HOME/flutter"
 
 # Flutter가 이미 설치되어 있는지 확인
 if [ ! -d "$FLUTTER_HOME" ]; then

@@ -135,9 +135,23 @@ class _NewsPageState extends State<NewsPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
+    final size = MediaQuery.of(context).size;
+    final screenWidth = size.width;
+    final screenHeight = size.height;
     final isMobile = screenWidth < 600;
     final isSmallMobile = screenWidth < 360;
+    // 화면 방향 감지
+    final isPortrait =
+        MediaQuery.of(context).orientation == Orientation.portrait;
+
+    // 동적 크기 계산
+    final titleFontSize = isMobile ? (isSmallMobile ? 18.0 : 20.0) : 22.0;
+    final subtitleFontSize = isMobile ? (isSmallMobile ? 11.0 : 13.0) : 14.0;
+    final contentPadding = EdgeInsets.symmetric(
+      horizontal: isMobile ? screenWidth * 0.04 : 16.0,
+      vertical: isMobile ? screenHeight * 0.02 : 32.0,
+    );
+    final cardBorderRadius = isMobile ? 12.0 : 18.0;
 
     return Scaffold(
       backgroundColor:
@@ -151,7 +165,7 @@ class _NewsPageState extends State<NewsPage> {
           isMobile ? '대선 시뮬레이터' : '2025 21대 대선 시뮬레이터',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: isSmallMobile ? 18 : (isMobile ? 20 : 22),
+            fontSize: titleFontSize,
             letterSpacing: -1,
             color: isDark ? Colors.white : Colors.black87,
           ),
@@ -239,7 +253,7 @@ class _NewsPageState extends State<NewsPage> {
                 Text(
                   '이 데이터는 $timeRange까지의 $totalArticles개의 기사를 취합한 결과입니다.',
                   style: TextStyle(
-                    fontSize: isMobile ? 11 : 13,
+                    fontSize: subtitleFontSize,
                     color: isDark ? Colors.white60 : Colors.black54,
                   ),
                   textAlign: TextAlign.center,
@@ -248,7 +262,7 @@ class _NewsPageState extends State<NewsPage> {
                 Text(
                   '데이터는 매일 오전 6시에 갱신됩니다.',
                   style: TextStyle(
-                    fontSize: isMobile ? 10 : 12,
+                    fontSize: isSmallMobile ? 10 : 12,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.amber[200] : Colors.indigo,
                   ),
@@ -274,10 +288,7 @@ class _NewsPageState extends State<NewsPage> {
                 ),
               )
               : ListView(
-                padding: EdgeInsets.symmetric(
-                  vertical: isMobile ? 16 : 32,
-                  horizontal: isMobile ? 8 : 16,
-                ),
+                padding: contentPadding,
                 children: [
                   // 후보별 감성 통계
                   Center(
@@ -293,9 +304,7 @@ class _NewsPageState extends State<NewsPage> {
                           horizontal: isMobile ? 8 : 16,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            isMobile ? 12 : 18,
-                          ),
+                          borderRadius: BorderRadius.circular(cardBorderRadius),
                         ),
                         child: Padding(
                           padding: EdgeInsets.all(isMobile ? 12 : 16),
@@ -314,7 +323,8 @@ class _NewsPageState extends State<NewsPage> {
                               GridView.count(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                crossAxisCount: isMobile ? 1 : 3,
+                                crossAxisCount:
+                                    isPortrait ? (isMobile ? 1 : 2) : 3,
                                 mainAxisSpacing: isMobile ? 12 : 16,
                                 crossAxisSpacing: isMobile ? 0 : 16,
                                 childAspectRatio: isMobile ? 2.5 : 2.0,
@@ -354,10 +364,10 @@ class _NewsPageState extends State<NewsPage> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: ExpansionTile(
-                          title: const Text(
+                          title: Text(
                             '📊 취합된 뉴스 기사 목록 일부',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: isMobile ? 18 : 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -367,6 +377,7 @@ class _NewsPageState extends State<NewsPage> {
                                 news: news,
                                 isDark: isDark,
                                 onTap: () => _launchUrl(news.url),
+                                isMobile: isMobile,
                               ),
                             ),
                           ],
@@ -631,11 +642,13 @@ class _NewsCard extends StatelessWidget {
   final NewsItem news;
   final bool isDark;
   final VoidCallback onTap;
+  final bool isMobile;
 
   const _NewsCard({
     required this.news,
     required this.isDark,
     required this.onTap,
+    required this.isMobile,
   });
 
   Color _getSentimentColor(String sentiment) {
@@ -664,12 +677,18 @@ class _NewsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final candidateColor = _getCandidateColor(news.title, news.summary);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final fontSize =
+        screenWidth < 360 ? 13.0 : (screenWidth < 600 ? 14.0 : 15.0);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       color: isDark ? const Color(0xFF1A1E26) : Colors.grey[50],
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: screenWidth * 0.04,
+          vertical: screenWidth * 0.02,
+        ),
         leading: Container(
           width: 12,
           height: 12,
@@ -680,7 +699,7 @@ class _NewsCard extends StatelessWidget {
         ),
         title: Text(
           news.title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,47 +708,52 @@ class _NewsCard extends StatelessWidget {
             Text(
               news.summary,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: fontSize * 0.9,
                 color: isDark ? Colors.white70 : Colors.black87,
               ),
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getSentimentColor(news.sentiment).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    news.sentiment,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _getSentimentColor(news.sentiment),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getSentimentColor(
+                        news.sentiment,
+                      ).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      news.sentiment,
+                      style: TextStyle(
+                        fontSize: fontSize * 0.8,
+                        color: _getSentimentColor(news.sentiment),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  news.source,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                  const SizedBox(width: 8),
+                  Text(
+                    news.source,
+                    style: TextStyle(
+                      fontSize: fontSize * 0.8,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  news.publishedDate,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                  const SizedBox(width: 8),
+                  Text(
+                    news.publishedDate,
+                    style: TextStyle(
+                      fontSize: fontSize * 0.8,
+                      color: isDark ? Colors.white60 : Colors.black54,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

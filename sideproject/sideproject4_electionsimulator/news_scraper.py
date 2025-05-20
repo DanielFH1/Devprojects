@@ -88,6 +88,9 @@ class NewsAnalyzer:
         self.candidate_list = ["이재명", "김문수", "이준석"]
         self.cache_dir = Path("cache")
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        # API 사용량 모니터링을 위한 카운터 추가
+        self.api_calls_count = 0
+        self.last_reset_time = datetime.datetime.now()
     
     def _get_cache_path(self, article_id: str, analysis_type: str) -> Path:
         """캐시 파일 경로 생성"""
@@ -100,9 +103,12 @@ class NewsAnalyzer:
             try:
                 with open(cache_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    # 캐시가 24시간 이내인지 확인
-                    if datetime.datetime.now().timestamp() - data.get("timestamp", 0) < 86400:
+                    # 캐시 만료 시간을 24시간에서 7일로 연장
+                    if datetime.datetime.now().timestamp() - data.get("timestamp", 0) < 7 * 86400:
+                        logger.info(f"캐시에서 {analysis_type} 결과 로드: {article_id}")
                         return data.get("result")
+                    else:
+                        logger.info(f"캐시 만료됨: {article_id}_{analysis_type}")
             except Exception as e:
                 logger.error(f"캐시 로드 실패: {str(e)}")
         return None
@@ -116,8 +122,24 @@ class NewsAnalyzer:
                     "result": result,
                     "timestamp": datetime.datetime.now().timestamp()
                 }, f, ensure_ascii=False, indent=2)
+            logger.info(f"캐시에 저장 완료: {article_id}_{analysis_type}")
         except Exception as e:
             logger.error(f"캐시 저장 실패: {str(e)}")
+
+    def _track_api_usage(self):
+        """API 사용량 추적"""
+        self.api_calls_count += 1
+        
+        # 일일 사용량 리셋 (매일 자정)
+        now = datetime.datetime.now()
+        if now.date() > self.last_reset_time.date():
+            logger.info(f"일일 API 사용량 리셋: 이전 카운트 {self.api_calls_count}")
+            self.api_calls_count = 1
+            self.last_reset_time = now
+            
+        # 사용량 로깅
+        if self.api_calls_count % 10 == 0:
+            logger.warning(f"주의: OpenAI API 호출 횟수가 {self.api_calls_count}회 도달했습니다")
 
     @backoff.on_exception(
         backoff.expo,
@@ -132,10 +154,20 @@ class NewsAnalyzer:
         if cached_result:
             return cached_result
 
+        # 내용이 너무 짧은 경우 API 호출 방지
+        if len(description) < 50:
+            simple_summary = f"{title}에 대한 간략한 내용."
+            self._save_to_cache(article_id, "summary", simple_summary)
+            return simple_summary
+
         system_msg = "당신은 똑똑한 뉴스 요약가입니다. 한국 정치뉴스를 간결하게 요약해줍니다."
         user_msg = f"""[뉴스 제목]: {title}\n[내용 요약 대상]: {description}\n\n이 기사를 3줄 이내로 요약해줘."""
 
         try:
+            # API 사용량 추적
+            self._track_api_usage()
+            
+            logger.info(f"OpenAI API 호출: summarize_news - {article_id}")
             response = openai.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
@@ -150,7 +182,7 @@ class NewsAnalyzer:
             return result
         except Exception as e:
             logger.error(f"기사 요약 실패: {str(e)}")
-            return ""
+            return f"{title}의 요약 정보를 가져올 수 없습니다."
 
     @backoff.on_exception(
         backoff.expo,
@@ -165,10 +197,20 @@ class NewsAnalyzer:
         if cached_result:
             return cached_result
 
+        # 내용이 너무 짧은 경우 API 호출 방지
+        if len(description) < 50:
+            default_sentiment = "중립"
+            self._save_to_cache(article_id, "sentiment", default_sentiment)
+            return default_sentiment
+
         system_msg = "당신은 뉴스 기사의 감성 분석가입니다."
         user_msg = f"""[뉴스 제목]: {title}\n[뉴스 설명]: {description}\n\n이 뉴스는 긍정적인가요, 부정적인가요, 중립적인가요? 아래 중 하나로만 대답하세요.\n- 긍정\n- 부정\n- 중립"""
 
         try:
+            # API 사용량 추적
+            self._track_api_usage()
+            
+            logger.info(f"OpenAI API 호출: analyze_sentiment - {article_id}")
             response = openai.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
@@ -188,6 +230,23 @@ class NewsAnalyzer:
 
     def _summarize_news_batch(self, news_batch: List[Dict[str, Any]], batch_num: int, total_batches: int) -> str:
         """뉴스 배치 요약 (Map 단계)"""
+        # 배치가 비어있으면 처리하지 않음
+        if not news_batch:
+            return "배치에 뉴스가 없습니다."
+            
+        # 캐시 키 생성
+        batch_key = hashlib.md5(
+            json.dumps(
+                [(n['title'], n['url']) for n in news_batch], 
+                sort_keys=True
+            ).encode()
+        ).hexdigest()
+        
+        # 캐시 확인
+        cached_result = self._load_from_cache(batch_key, "batch_summary")
+        if cached_result:
+            return cached_result
+        
         system_msg = "당신은 대선 뉴스를 분석하는 정치 전략가입니다. 주어진 뉴스들을 상세하게 분석해주세요."
         
         news_list_str = "\n\n".join([
@@ -198,6 +257,10 @@ class NewsAnalyzer:
         user_msg = f"""아래는 전체 {total_batches}개 배치 중 {batch_num}번째 배치의 뉴스입니다:\n\n{news_list_str}\n\n이 뉴스들을 상세하게 분석해주세요. 다음 항목들을 포함해주세요:\n1. 주요 이슈와 키워드\n2. 후보자별 언급 빈도와 이미지\n3. 긍정/부정/중립 기사의 비율\n4. 특이사항이나 주목할 만한 트렌드"""
 
         try:
+            # API 사용량 추적
+            self._track_api_usage()
+            
+            logger.info(f"OpenAI API 호출: batch_summary - 배치 {batch_num}/{total_batches}")
             response = openai.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
@@ -206,13 +269,33 @@ class NewsAnalyzer:
                 ],
                 temperature=0.5
             )
-            return response.choices[0].message.content.strip()
+            result = response.choices[0].message.content.strip()
+            # 결과 캐시에 저장
+            self._save_to_cache(batch_key, "batch_summary", result)
+            return result
         except Exception as e:
             logger.error(f"배치 {batch_num} 요약 실패: {str(e)}")
             return f"배치 {batch_num} 분석 실패"
 
     def _create_final_summary(self, batch_summaries: List[str], time_range: str) -> str:
         """최종 요약 생성 (Reduce 단계)"""
+        # 배치 요약이 비어있으면 처리하지 않음
+        if not batch_summaries:
+            return "분석할 데이터가 충분하지 않습니다."
+            
+        # 캐시 키 생성
+        summary_key = hashlib.md5(
+            json.dumps(
+                [s[:100] for s in batch_summaries], 
+                sort_keys=True
+            ).encode()
+        ).hexdigest()
+        
+        # 캐시 확인
+        cached_result = self._load_from_cache(summary_key, "final_summary")
+        if cached_result:
+            return cached_result
+            
         system_msg = "당신은 대선 뉴스를 종합 분석하는 정치 전략가입니다. 여러 배치의 분석 결과를 종합하여 최종 트렌드를 도출해주세요."
         
         summaries_str = "\n\n=== 배치별 분석 ===\n\n" + "\n\n".join([
@@ -223,6 +306,10 @@ class NewsAnalyzer:
         user_msg = f"""아래는 {time_range} 동안 수집된 뉴스를 여러 배치로 나누어 분석한 결과입니다:\n\n{summaries_str}\n\n이 분석 결과들을 종합하여 다음 항목들을 포함한 최종 트렌드 분석을 제공해주세요:\n1. 전체적인 여론 동향\n2. 후보자별 이미지와 지지율 변화 추이\n3. 주요 이슈와 키워드의 변화\n4. 향후 전망"""
 
         try:
+            # API 사용량 추적
+            self._track_api_usage()
+            
+            logger.info(f"OpenAI API 호출: final_summary - {time_range}")
             response = openai.chat.completions.create(
                 model="gpt-4-turbo",
                 messages=[
@@ -231,13 +318,26 @@ class NewsAnalyzer:
                 ],
                 temperature=0.5
             )
-            return response.choices[0].message.content.strip()
+            result = response.choices[0].message.content.strip()
+            # 결과 캐시에 저장 
+            self._save_to_cache(summary_key, "final_summary", result)
+            return result
         except Exception as e:
             logger.error(f"최종 요약 생성 실패: {str(e)}")
             return "최종 트렌드 분석을 수행할 수 없습니다."
 
     def analyze_trends(self, news_data: List[Dict[str, Any]], time_range: str) -> Dict[str, Any]:
         """트렌드 분석 (Map-Reduce 방식)"""
+        # 뉴스 데이터가 없으면 분석하지 않음
+        if not news_data:
+            logger.warning("분석할 뉴스 데이터가 없습니다.")
+            return {
+                "trend_summary": "현재 분석할 뉴스 데이터가 충분하지 않습니다.",
+                "candidate_stats": {candidate: {"긍정": 0, "부정": 0, "중립": 0} for candidate in self.candidate_list},
+                "total_articles": 0,
+                "time_range": time_range
+            }
+            
         # 후보별 감성 통계 계산
         candidate_stats = defaultdict(lambda: {"긍정": 0, "부정": 0, "중립": 0})
         for news in news_data:
@@ -250,6 +350,17 @@ class NewsAnalyzer:
         batch_size = 50
         batches = [news_data[i:i + batch_size] for i in range(0, len(news_data), batch_size)]
         total_batches = len(batches)
+        
+        # 분석할 데이터가 너무 적으면 배치 처리 생략
+        if len(news_data) < 10:
+            logger.info(f"뉴스 데이터가 너무 적어 간단한 분석만 수행: {len(news_data)}개")
+            return {
+                "trend_summary": "현재 분석할 뉴스 데이터가 충분하지 않습니다. 더 많은 데이터가 수집되면 상세한 분석이 제공됩니다.",
+                "candidate_stats": dict(candidate_stats),
+                "total_articles": len(news_data),
+                "time_range": time_range,
+                "news_list": news_data[:20]  # 최대 20개만 포함
+            }
         
         logger.info(f"📊 {total_batches}개 배치로 나누어 분석 시작...")
         
@@ -268,7 +379,8 @@ class NewsAnalyzer:
             "trend_summary": final_summary,
             "candidate_stats": dict(candidate_stats),
             "total_articles": len(news_data),
-            "time_range": time_range
+            "time_range": time_range,
+            "news_list": news_data[:100]  # 최대 100개만 포함
         }
 
 class NewsPipeline:
@@ -280,6 +392,7 @@ class NewsPipeline:
         self.assets_path.mkdir(parents=True, exist_ok=True)
         self.temp_storage: List[Dict[str, Any]] = []
         self.last_trend_summary_time = None
+        self.last_run_date = None
     
     def process_articles(self, articles: List[NewsArticle]) -> List[Dict[str, Any]]:
         """기사 처리 (요약 및 감성 분석)"""
@@ -309,8 +422,14 @@ class NewsPipeline:
             json.dump(trend_data, f, ensure_ascii=False, indent=2)
         logger.info(f"✅ 트렌드 요약 저장 완료: {filename}")
     
-    def run_hourly_collection(self):
-        """1시간마다 실행되는 뉴스 수집"""
+    def run_daily_collection(self):
+        """매일 실행되는 뉴스 수집 (오전 6시)"""
+        # 오늘 이미 실행되었는지 확인
+        today = datetime.datetime.now().date()
+        if self.last_run_date == today:
+            logger.info(f"⏭️ 오늘({today})은 이미 뉴스 수집을 실행했습니다. 건너뜁니다.")
+            return
+            
         logger.info("⏳ 뉴스 수집 시작...")
         
         # 뉴스 수집
@@ -321,35 +440,30 @@ class NewsPipeline:
         processed_news = self.process_articles(articles)
         self.temp_storage.extend(processed_news)
         
-        # 현재 시간이 마지막 트렌드 요약으로부터 3시간이 지났는지 확인
+        # 트렌드 분석
         current_time = datetime.datetime.now()
-        if (self.last_trend_summary_time is None or 
-            (current_time - self.last_trend_summary_time).total_seconds() >= 3 * 3600):
-            
-            # 트렌드 분석
-            time_range = f"{self.last_trend_summary_time.strftime('%H:%M') if self.last_trend_summary_time else '시작'} ~ {current_time.strftime('%H:%M')}"
-            trend_data = self.analyzer.analyze_trends(self.temp_storage, time_range)
-            
-            # 트렌드 요약 저장
-            self.save_trend_summary(trend_data)
-            
-            # 임시 저장소 초기화 및 시간 업데이트
-            self.temp_storage = []
-            self.last_trend_summary_time = current_time
+        time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트"
+        trend_data = self.analyzer.analyze_trends(self.temp_storage, time_range)
+        
+        # 트렌드 요약 저장
+        self.save_trend_summary(trend_data)
+        
+        # 임시 저장소 초기화 및 시간 업데이트
+        self.temp_storage = []
+        self.last_trend_summary_time = current_time
+        self.last_run_date = today
+        
+        logger.info(f"✅ 오늘의 뉴스 수집 및 분석 완료: {today}")
 
 # 전역 파이프라인 인스턴스 생성
 pipeline = NewsPipeline()
 
 def run_news_pipeline():
     """스케줄러에서 호출될 함수"""
-    pipeline.run_hourly_collection()
+    pipeline.run_daily_collection()
 
-# 스케줄러 설정
-schedule.every(1).hours.do(run_news_pipeline)  # 1시간마다 뉴스 수집
-schedule.every().day.at("06:00").do(lambda: pipeline.analyzer.analyze_trends(pipeline.temp_storage, "전일"))  # 매일 오전 6시에 트렌드 분석
-
+# 직접 실행 시 (api_server.py에서 스케줄러 설정함)
 if __name__ == "__main__":
-    logger.info("🕒 자동 실행 시작. 종료하려면 Ctrl+C")
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    logger.info("🛑 주의: 이 스크립트는 직접 실행하지 말고 api_server.py를 통해 실행하세요.")
+    logger.info("🕒 테스트 목적으로 한 번의 뉴스 수집을 실행합니다.")
+    run_news_pipeline()

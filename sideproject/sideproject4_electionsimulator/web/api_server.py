@@ -81,6 +81,9 @@ class NewsCache:
         self.error_count: int = 0
         self.last_error: Optional[str] = None
         self.pipeline = NewsPipeline()
+        # 스케줄러 실행 상태 추적
+        self.scheduler_running = False
+        self.daily_task_last_run = None
 
     def update(self, data: Dict[str, Any]):
         self.latest_data = data
@@ -100,7 +103,9 @@ class NewsCache:
             "update_count": self.update_count,
             "error_count": self.error_count,
             "last_error": self.last_error,
-            "is_healthy": self.error_count < 3 and self.last_update is not None
+            "is_healthy": self.error_count < 3 and self.last_update is not None,
+            "scheduler_running": self.scheduler_running,
+            "daily_task_last_run": self.daily_task_last_run.isoformat() if self.daily_task_last_run else None
         }
 
 news_cache = NewsCache()
@@ -153,15 +158,37 @@ def update_news_cache():
         news_cache.record_error(str(e))
         logger.error(f"캐시 업데이트 실패: {str(e)}")
 
+def run_scheduled_news_pipeline():
+    """매일 오전 6시에 실행되는 뉴스 수집 함수"""
+    try:
+        # 오늘 이미 실행되었는지 확인
+        now = datetime.now()
+        
+        if news_cache.daily_task_last_run:
+            last_run_date = news_cache.daily_task_last_run.date()
+            if last_run_date == now.date():
+                logger.info(f"⏭️ 오늘({now.date()})은 이미 뉴스 수집을 실행했습니다. 건너뜁니다.")
+                return
+        
+        logger.info(f"🔔 예정된 일일 뉴스 수집 시작: {now}")
+        run_news_pipeline()  # 뉴스 수집 및 분석 실행
+        news_cache.daily_task_last_run = now
+        logger.info(f"✅ 일일 뉴스 수집 완료: {now}")
+    except Exception as e:
+        logger.error(f"❌ 예정된 뉴스 수집 실패: {str(e)}")
+
 def run_scheduler():
     """백그라운드에서 스케줄러 실행"""
+    news_cache.scheduler_running = True
+    logger.info("🕒 스케줄러가 시작되었습니다.")
+    
     while True:
         try:
             schedule.run_pending()
-            time.sleep(1)
+            time.sleep(60)  # 1분마다 확인 (1초보다 효율적)
         except Exception as e:
             logger.error(f"❌ 스케줄러 오류: {str(e)}")
-            time.sleep(60)
+            time.sleep(300)  # 오류 발생 시 5분 대기
 
 # --- API 엔드포인트 ---
 @app.get("/status")
@@ -214,7 +241,7 @@ async def get_news_data():
             "data": news_cache.latest_data,
             "metadata": {
                 "last_updated": news_cache.last_update.isoformat(),
-                "next_update": (news_cache.last_update + timedelta(hours=1)).isoformat() if news_cache.last_update else None,
+                "next_update": (news_cache.last_update + timedelta(hours=24)).isoformat() if news_cache.last_update else None,
                 "status": "success"
             }
         }
@@ -233,7 +260,7 @@ async def get_news_data():
             },
             "metadata": {
                 "last_updated": datetime.now().isoformat(),
-                "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
+                "next_update": (datetime.now() + timedelta(hours=24)).isoformat(),
                 "status": "error",
                 "error": str(e)
             }
@@ -242,6 +269,17 @@ async def get_news_data():
 @app.post("/refresh")
 async def force_refresh(background_tasks: BackgroundTasks):
     """수동으로 뉴스 데이터 새로고침"""
+    # 마지막 새로고침으로부터 최소 1시간이 지났는지 확인 (남용 방지)
+    if news_cache.daily_task_last_run:
+        time_since_last_run = datetime.now() - news_cache.daily_task_last_run
+        if time_since_last_run.total_seconds() < 3600:  # 1시간 = 3600초
+            return {
+                "message": f"새로고침 요청이 너무 빈번합니다. {3600 - int(time_since_last_run.total_seconds())}초 후에 다시 시도해주세요.",
+                "status": "rate_limited",
+                "last_run": news_cache.daily_task_last_run.isoformat(),
+                "next_available": (news_cache.daily_task_last_run + timedelta(hours=1)).isoformat()
+            }
+    
     background_tasks.add_task(run_news_pipeline)
     return {"message": "뉴스 데이터 새로고침이 시작되었습니다."}
 
@@ -256,16 +294,17 @@ async def startup_event():
     except Exception as e:
         logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
     
-    # 스케줄러 설정
-    # 1시간마다 수행하던 뉴스 수집을 매일 오전 6시에만 수행하도록 변경
-    schedule.every().day.at("06:00").do(run_news_pipeline)  # 매일 오전 6시에 뉴스 수집 및 분석
-    schedule.every().day.at("06:10").do(lambda: news_cache.pipeline.analyzer.analyze_trends(news_cache.pipeline.temp_storage, "전일"))  # 매일 오전 6시 10분에 트렌드 분석
-    schedule.every(5).minutes.do(update_news_cache)  # 캐시 업데이트는 5분마다 유지
+    # 스케줄러 설정 - 명확하게 하나의 작업만 지정
+    schedule.clear()  # 기존 스케줄 초기화
+    schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)  # 매일 오전 6시에 뉴스 수집 및 분석
+    schedule.every(30).minutes.do(update_news_cache)  # 캐시 업데이트는 30분마다 유지 (5분→30분으로 변경)
     
-    # 백그라운드 스레드에서 스케줄러 실행
-    scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-    scheduler_thread.start()
-    logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다. 매일 오전 6시에 데이터가 갱신됩니다.")
+    # 스케줄러가 이미 실행 중인지 확인
+    if not news_cache.scheduler_running:
+        # 백그라운드 스레드에서 스케줄러 실행
+        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+        scheduler_thread.start()
+        logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다. 매일 오전 6시에 데이터가 갱신됩니다.")
 
 # --- Flutter 웹 앱 제공 ---
 if not FLUTTER_BUILD_DIR.exists() or not (FLUTTER_BUILD_DIR / "index.html").exists():
