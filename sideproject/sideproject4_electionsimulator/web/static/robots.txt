@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://electionsimulatorwebservice.onrender.com/sitemap.xml 

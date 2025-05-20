@@ -34,6 +34,8 @@ app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent.parent
 FLUTTER_BUILD_DIR = BASE_DIR / "flutter_ui" / "build" / "web"
 ASSETS_DIR = BASE_DIR / "assets"
+# 정적 파일 디렉토리 설정 - Flutter 빌드 파일용
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 # assets 디렉토리가 없으면 생성
 try:
@@ -41,6 +43,13 @@ try:
     logger.info(f"✅ assets 디렉토리 확인/생성 완료: {ASSETS_DIR}")
 except Exception as e:
     logger.error(f"❌ assets 디렉토리 생성 실패: {str(e)}")
+
+# static 디렉토리가 없으면 생성
+try:
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"✅ static 디렉토리 확인/생성 완료: {STATIC_DIR}")
+except Exception as e:
+    logger.error(f"❌ static 디렉토리 생성 실패: {str(e)}")
 
 # 기본 데이터 파일 생성
 DEFAULT_DATA_FILE = ASSETS_DIR / "trend_summary_default.json"
@@ -327,6 +336,23 @@ else:
         return FileResponse(str(FLUTTER_BUILD_DIR / "index.html"))
 
     # 정적 파일 제공 - 각 디렉토리가 존재하는 경우에만 마운트
+    # 1. Flutter 웹 빌드 파일을 static 디렉토리로 제공
+    if STATIC_DIR.exists():
+        try:
+            app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+            logger.info(f"✅ 정적 파일 디렉토리 마운트 완료: {STATIC_DIR}")
+        except Exception as e:
+            logger.error(f"❌ 정적 파일 디렉토리 마운트 실패: {str(e)}")
+    else:
+        logger.warning(f"⚠️ 정적 파일 디렉토리를 찾을 수 없습니다: {STATIC_DIR}")
+        # 2. 대안으로 Flutter 빌드 디렉토리 직접 마운트 시도
+        try:
+            app.mount("/", StaticFiles(directory=str(FLUTTER_BUILD_DIR), html=True), name="flutter_web")
+            logger.info(f"✅ Flutter 웹 루트 디렉토리 마운트 완료: {FLUTTER_BUILD_DIR}")
+        except Exception as e:
+            logger.error(f"❌ Flutter 웹 루트 디렉토리 마운트 실패: {str(e)}")
+    
+    # 3. 개별 디렉토리 마운트 (여전히 유효하지만 위의 전체 마운트가 먼저 시도됨)
     try:
         if (FLUTTER_BUILD_DIR / "assets").exists():
             app.mount("/assets", StaticFiles(directory=str(FLUTTER_BUILD_DIR / "assets")), name="flutter_assets")
@@ -354,9 +380,40 @@ else:
     except Exception as e:
         logger.error(f"❌ canvaskit 디렉토리 마운트 실패: {str(e)}")
     
+    # 4. 모든 파일에 대한 명시적인 MIME 타입 설정이 있는 catch-all 라우트
     @app.get("/{path:path}")
     async def serve_flutter_web(path: str):
-        file_path = FLUTTER_BUILD_DIR / path
-        if file_path.exists():
-            return FileResponse(str(file_path))
+        # 먼저 static 디렉토리에서 찾기
+        static_path = STATIC_DIR / path
+        if static_path.exists():
+            # 파일의 MIME 타입을 명시적으로 설정
+            mime_type = None
+            if path.endswith('.js'):
+                mime_type = 'application/javascript'
+            elif path.endswith('.css'):
+                mime_type = 'text/css'
+            elif path.endswith('.html'):
+                mime_type = 'text/html'
+            elif path.endswith('.json'):
+                mime_type = 'application/json'
+            return FileResponse(str(static_path), media_type=mime_type)
+            
+        # 다음으로 Flutter 빌드 디렉토리에서 찾기
+        flutter_path = FLUTTER_BUILD_DIR / path
+        if flutter_path.exists():
+            # 파일의 MIME 타입을 명시적으로 설정
+            mime_type = None
+            if path.endswith('.js'):
+                mime_type = 'application/javascript'
+            elif path.endswith('.css'):
+                mime_type = 'text/css'
+            elif path.endswith('.html'):
+                mime_type = 'text/html'
+            elif path.endswith('.json'):
+                mime_type = 'application/json'
+            return FileResponse(str(flutter_path), media_type=mime_type)
+            
+        # 파일이 존재하지 않으면 index.html 반환
+        if (STATIC_DIR / "index.html").exists():
+            return FileResponse(str(STATIC_DIR / "index.html"))
         return FileResponse(str(FLUTTER_BUILD_DIR / "index.html"))

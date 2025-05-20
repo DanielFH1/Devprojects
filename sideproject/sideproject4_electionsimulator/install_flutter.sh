@@ -23,4 +23,21 @@ else
 fi
 
 # PATH에 Flutter 추가 (이미 설치된 경우에도)
-export PATH="$FLUTTER_HOME/bin:$PATH" 
+export PATH="$FLUTTER_HOME/bin:$PATH"
+
+# PATH를 확인하고 echo 해보기
+echo "Current PATH: $PATH"
+echo "Flutter binary location: $(which flutter 2>/dev/null || echo 'flutter not found in PATH')"
+
+# Render.com의 .bashrc에 PATH 추가 (영구적으로)
+echo 'export PATH="$HOME/flutter/bin:$PATH"' >> $HOME/.bashrc
+
+# Flutter 빌드 파일을 static 디렉토리로 복사
+echo "Copying Flutter build files to static directory..."
+mkdir -p web/static
+if [ -d "flutter_ui/build/web" ]; then
+    cp -r flutter_ui/build/web/* web/static/
+    echo "✅ Flutter build files copied to web/static/"
+else
+    echo "❌ Flutter build directory not found. Build might have failed."
+fi 
