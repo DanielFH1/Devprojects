@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
 # !scrapper.py의 함수들을 임포트
-from news_scraper import run_news_pipeline, NewsPipeline, rank_news_by_importance
+from news_scraper import run_news_pipeline, NewsPipeline, rank_news_by_importance, pipeline
 
 app = FastAPI()
 
@@ -282,8 +282,8 @@ def run_initial_fetch():
     try:
         logger.info("🚀 서버 시작 시 초기 뉴스 수집을 시작합니다...")
         
-        # 뉴스 수집 실행
-        run_news_pipeline()
+        # 뉴스 수집 실행 - 직접 pipeline 객체의 메서드 호출
+        pipeline.run_daily_collection()
         
         # 캐시 업데이트
         update_news_cache()
@@ -350,18 +350,29 @@ async def get_news_data():
                         "time_range": "데이터 수집 중",
                         "news_list": []  # 빈 뉴스 리스트 추가
                     }
+                
+                # 백그라운드에서 데이터 수집 시작
+                if not news_cache.initial_fetch_done:
+                    import threading
+                    initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
+                    initial_fetch_thread.start()
+                    logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
+                    news_cache.initial_fetch_done = True
+                
                 return {
                     "data": default_data,
                     "metadata": {
                         "last_updated": datetime.now().isoformat(),
                         "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
-                        "status": "using_default"
+                        "status": "using_default",
+                        "message": "뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요."
                     }
                 }
         
         # news_list 필드가 없거나 비어있으면 빈 배열 추가 또는 강제 데이터 수집
         if "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
             logger.warning("⚠️ news_list가 비어있어 기본 데이터를 사용합니다. 데이터 수집이 필요합니다.")
+            
             # 강제로 뉴스 데이터 수집 시작 (백그라운드)
             if not news_cache.initial_fetch_done:
                 import threading
@@ -371,7 +382,18 @@ async def get_news_data():
                 news_cache.initial_fetch_done = True
             
             news_cache.latest_data["news_list"] = []
-
+            
+            # 사용자에게 데이터 수집 중임을 알리는 메시지 추가
+            return {
+                "data": news_cache.latest_data,
+                "metadata": {
+                    "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else datetime.now().isoformat(),
+                    "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
+                    "status": "collecting",
+                    "message": "뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요."
+                }
+            }
+        
         # 뉴스 기사가 있지만 아직 중요도 정렬이 안된 경우
         elif news_cache.latest_data["news_list"] and not any("importance_score" in news for news in news_cache.latest_data["news_list"]):
             try:
@@ -440,28 +462,12 @@ async def startup_event():
         
         # Render.com 환경에서는 서버 시작 시 데이터 수집 수행
         if os.environ.get('RENDER') == 'true':
-            # 영구 저장소에 데이터가 없거나 24시간 이상 지난 경우 또는 news_list가 비어있는 경우 수집
-            should_fetch = True
-            
-            # 캐시에 데이터가 있고 news_list도 존재하는지 확인
-            if (news_cache.latest_data and 
-                "news_list" in news_cache.latest_data and 
-                news_cache.latest_data["news_list"] and 
-                news_cache.last_update):
-                
-                time_since_update = datetime.now() - news_cache.last_update
-                # 업데이트 간격을 12시간으로 줄임 - 데이터 업데이트를 더 자주하도록
-                if time_since_update.total_seconds() < 43200:  # 12시간 이내
-                    should_fetch = False
-                    logger.info(f"⏭️ 최근 {int(time_since_update.total_seconds()/3600)}시간 전에 데이터가 업데이트되어 수집을 건너뜁니다.")
-            
-            # 처음 배포할 때는 항상 데이터 수집 수행
-            if should_fetch or not news_cache.initial_fetch_done:
-                logger.info("🔄 Render.com 환경에서 초기 데이터 수집 시작...")
-                # 여기서 threading 모듈을 로컬로 임포트하지 않고 전역 스코프의 모듈을 사용
-                initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
-                initial_fetch_thread.start()
-                logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
+            logger.info("🔄 Render.com 환경에서 초기 데이터 수집 시작...")
+            # 강제로 데이터 수집 시작 (백그라운드)
+            import threading
+            initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
+            initial_fetch_thread.start()
+            logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
         else:
             logger.info("ℹ️ 로컬 환경에서는 자동 데이터 수집이 비활성화됩니다. '/refresh' 엔드포인트를 호출하여 수동으로 수집하세요.")
     except Exception as e:
