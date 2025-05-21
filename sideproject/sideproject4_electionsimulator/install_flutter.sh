@@ -3,6 +3,18 @@
 # Flutter 설치 디렉토리 (Render.com 환경에 맞게 수정)
 FLUTTER_HOME="$HOME/flutter"
 
+# 영구 저장소 디렉토리 생성
+PERSISTENT_DIR="/opt/render/project/src/persistent_data"
+echo "Creating persistent directory for data storage: $PERSISTENT_DIR"
+mkdir -p $PERSISTENT_DIR
+chmod 777 $PERSISTENT_DIR
+echo "✅ Persistent directory created successfully"
+
+# 환경 변수 설정
+export RENDER=true
+echo 'export RENDER=true' >> $HOME/.bashrc
+echo "✅ Set RENDER environment variable to true"
+
 # Flutter가 이미 설치되어 있는지 확인
 if [ ! -d "$FLUTTER_HOME" ]; then
     echo "Installing Flutter..."

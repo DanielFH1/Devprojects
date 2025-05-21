@@ -161,7 +161,9 @@ class _CandidateDetailPageState extends State<CandidateDetailPage>
                                     width: 80,
                                     height: 80,
                                     decoration: BoxDecoration(
-                                      color: candidateColor.withOpacity(0.1),
+                                      color: candidateColor.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: candidateColor,
@@ -169,8 +171,8 @@ class _CandidateDetailPageState extends State<CandidateDetailPage>
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: candidateColor.withOpacity(
-                                            0.2,
+                                          color: candidateColor.withValues(
+                                            alpha: 0.2,
                                           ),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
@@ -245,13 +247,13 @@ class _CandidateDetailPageState extends State<CandidateDetailPage>
                                       vertical: 16,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: candidateColor.withOpacity(
-                                        _isHoveringPledge ? 0.15 : 0.1,
+                                      color: candidateColor.withValues(
+                                        alpha: isDark ? 0.15 : 0.1,
                                       ),
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                        color: candidateColor.withOpacity(
-                                          _isHoveringPledge ? 0.4 : 0.3,
+                                        color: candidateColor.withValues(
+                                          alpha: isDark ? 0.4 : 0.3,
                                         ),
                                         width: _isHoveringPledge ? 1.5 : 1,
                                       ),
@@ -260,7 +262,7 @@ class _CandidateDetailPageState extends State<CandidateDetailPage>
                                               ? [
                                                 BoxShadow(
                                                   color: candidateColor
-                                                      .withOpacity(0.1),
+                                                      .withValues(alpha: 0.1),
                                                   blurRadius: 8,
                                                   offset: const Offset(0, 2),
                                                 ),
@@ -416,7 +418,7 @@ class _CandidateDetailPageState extends State<CandidateDetailPage>
                                           decoration: BoxDecoration(
                                             color: _getSentimentColor(
                                               article['sentiment'] as String,
-                                            ).withOpacity(0.1),
+                                            ).withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(
                                               10,
                                             ),

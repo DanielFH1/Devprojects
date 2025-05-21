@@ -162,7 +162,7 @@ class _NewsPageState extends State<NewsPage> {
         shadowColor: isDark ? Colors.black26 : Colors.black12,
         surfaceTintColor: isDark ? null : Colors.white,
         title: Text(
-          isMobile ? '대선 시뮬레이터' : '2025__21대 대선 시뮬레이터',
+          isMobile ? '대선 시뮬레이터' : '2025 : 21대 대선 시뮬레이터',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: titleFontSize,
@@ -532,7 +532,10 @@ class _NewsPageState extends State<NewsPage> {
         vertical: isMobile ? 4 : 6,
       ),
       decoration: BoxDecoration(
-        color: isDark ? color.withOpacity(0.2) : color.withOpacity(0.1),
+        color:
+            isDark
+                ? color.withValues(alpha: 0.2)
+                : color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
       ),
       child: Row(
@@ -548,7 +551,7 @@ class _NewsPageState extends State<NewsPage> {
             '$label $count',
             style: TextStyle(
               fontSize: isMobile ? 12 : 14,
-              color: isDark ? color.withOpacity(0.9) : color,
+              color: isDark ? color.withValues(alpha: 0.9) : color,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -725,7 +728,7 @@ class _NewsCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: _getSentimentColor(
                         news.sentiment,
-                      ).withOpacity(0.1),
+                      ).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

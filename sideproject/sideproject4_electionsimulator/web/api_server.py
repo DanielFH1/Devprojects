@@ -13,6 +13,7 @@ import os
 import logging
 from typing import Dict, Any, Optional
 from collections import defaultdict
+import shutil  # 파일 복사를 위한 모듈 추가
 
 # 로깅 설정
 logging.basicConfig(
@@ -26,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
 # !scrapper.py의 함수들을 임포트
-from news_scraper import run_news_pipeline, NewsPipeline
+from news_scraper import run_news_pipeline, NewsPipeline, rank_news_by_importance
 
 app = FastAPI()
 
@@ -36,6 +37,23 @@ FLUTTER_BUILD_DIR = BASE_DIR / "flutter_ui" / "build" / "web"
 ASSETS_DIR = BASE_DIR / "assets"
 # 정적 파일 디렉토리 설정 - Flutter 빌드 파일용
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+# Render.com 영구 저장소 경로 설정
+PERSISTENT_DIR = None
+if os.environ.get('RENDER') == 'true':
+    PERSISTENT_DIR = Path("/opt/render/project/src/persistent_data")
+    PERSISTENT_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info(f"📂 Render.com 영구 저장소 경로 설정: {PERSISTENT_DIR}")
+    
+    # assets 폴더가 비어있고 영구 저장소에 데이터가 있으면 복사
+    if PERSISTENT_DIR.exists():
+        assets_files = list(ASSETS_DIR.glob("trend_summary_*.json"))
+        if not assets_files:
+            for json_file in PERSISTENT_DIR.glob("trend_summary_*.json"):
+                dest_file = ASSETS_DIR / json_file.name
+                if not dest_file.exists():
+                    shutil.copy(json_file, dest_file)
+                    logger.info(f"📋 영구 저장소에서 복원된 파일: {json_file.name}")
 
 # assets 디렉토리가 없으면 생성
 try:
@@ -93,6 +111,8 @@ class NewsCache:
         # 스케줄러 실행 상태 추적
         self.scheduler_running = False
         self.daily_task_last_run = None
+        # 강제 초기화 상태 추적
+        self.initial_fetch_done = False
 
     def update(self, data: Dict[str, Any]):
         self.latest_data = data
@@ -114,7 +134,8 @@ class NewsCache:
             "last_error": self.last_error,
             "is_healthy": self.error_count < 3 and self.last_update is not None,
             "scheduler_running": self.scheduler_running,
-            "daily_task_last_run": self.daily_task_last_run.isoformat() if self.daily_task_last_run else None
+            "daily_task_last_run": self.daily_task_last_run.isoformat() if self.daily_task_last_run else None,
+            "initial_fetch_done": self.initial_fetch_done
         }
 
 news_cache = NewsCache()
@@ -122,46 +143,67 @@ news_cache = NewsCache()
 def update_news_cache():
     """assets 폴더에서 최신 뉴스 데이터를 읽어와 캐시를 업데이트"""
     try:
-        news_files = sorted(
-            ASSETS_DIR.glob("trend_summary_*.json"),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True
-        )
+        # 최신 뉴스 데이터 파일 찾기 - 영구 저장소 우선 검사
+        latest_file = None
         
-        if not news_files:
+        # 1. 영구 저장소에서 최신 파일 찾기
+        if PERSISTENT_DIR and PERSISTENT_DIR.exists():
+            latest_link = PERSISTENT_DIR / "trend_summary_latest.json"
+            if latest_link.exists():
+                latest_file = latest_link
+                logger.info(f"📂 영구 저장소에서 최신 파일 발견: {latest_file}")
+        
+        # 2. 영구 저장소에 최신 파일이 없으면 assets 디렉토리 검사
+        if not latest_file:
+            news_files = sorted(
+                ASSETS_DIR.glob("trend_summary_*.json"),
+                key=lambda p: p.stat().st_mtime,
+                reverse=True
+            )
+            if news_files:
+                latest_file = news_files[0]
+                logger.info(f"📂 assets 폴더에서 최신 파일 발견: {latest_file}")
+        
+        # 3. 어디에도 파일이 없으면 기본 파일 사용
+        if not latest_file and DEFAULT_DATA_FILE.exists():
+            latest_file = DEFAULT_DATA_FILE
             logger.warning("뉴스 데이터 파일을 찾을 수 없어 기본 데이터를 사용합니다.")
-            if DEFAULT_DATA_FILE.exists():
-                with open(DEFAULT_DATA_FILE, "r", encoding="utf-8") as f:
+            
+        # 파일을 찾았으면 처리
+        if latest_file:
+            try:
+                with open(latest_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    news_cache.update(data)
-                    logger.info("✅ 기본 데이터로 캐시 업데이트 완료")
-            else:
-                news_cache.record_error("뉴스 데이터 파일을 찾을 수 없습니다.")
-            return
-
-        try:
-            with open(news_files[0], "r", encoding="utf-8") as f:
-                data = json.load(f)
-                # 기본값 설정으로 null 방지
-                processed_data = {
-                    "trend_summary": data.get("trend_summary", "데이터를 수집 중입니다..."),
-                    "candidate_stats": data.get("candidate_stats", {
-                        "이재명": {"긍정": 0, "부정": 0, "중립": 0},
-                        "김문수": {"긍정": 0, "부정": 0, "중립": 0},
-                        "이준석": {"긍정": 0, "부정": 0, "중립": 0}
-                    }),
-                    "total_articles": data.get("total_articles", 0),
-                    "time_range": data.get("time_range", "데이터 수집 중"),
-                    "news_list": data.get("news_list", [])  # news_list 필드 추가
-                }
-                news_cache.update(processed_data)
-                logger.info(f"✅ 뉴스 캐시 업데이트 완료: {news_files[0].name}")
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON 파싱 오류: {str(e)}")
-            news_cache.record_error(f"JSON 파싱 오류: {str(e)}")
-        except Exception as e:
-            logger.error(f"파일 읽기 오류: {str(e)}")
-            news_cache.record_error(f"파일 읽기 오류: {str(e)}")
+                    # 기본값 설정으로 null 방지
+                    processed_data = {
+                        "trend_summary": data.get("trend_summary", "데이터를 수집 중입니다..."),
+                        "candidate_stats": data.get("candidate_stats", {
+                            "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                            "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                            "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                        }),
+                        "total_articles": data.get("total_articles", 0),
+                        "time_range": data.get("time_range", "데이터 수집 중"),
+                        "news_list": data.get("news_list", [])  # news_list 필드 추가
+                    }
+                    
+                    # 뉴스 데이터가 있으면 중요도 기준으로 정렬
+                    if "news_list" in processed_data and processed_data["news_list"]:
+                        sorted_news = rank_news_by_importance(processed_data["news_list"], limit=30)
+                        processed_data["news_list"] = sorted_news
+                        logger.info(f"✅ 뉴스 데이터 중요도 정렬 완료: {len(sorted_news)}개")
+                    
+                    news_cache.update(processed_data)
+                    logger.info(f"✅ 뉴스 캐시 업데이트 완료: {latest_file.name}")
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 파싱 오류: {str(e)}")
+                news_cache.record_error(f"JSON 파싱 오류: {str(e)}")
+            except Exception as e:
+                logger.error(f"파일 읽기 오류: {str(e)}")
+                news_cache.record_error(f"파일 읽기 오류: {str(e)}")
+        else:
+            news_cache.record_error("뉴스 데이터 파일을 찾을 수 없습니다.")
+            logger.error("뉴스 데이터 파일을 찾을 수 없습니다.")
             
     except Exception as e:
         news_cache.record_error(str(e))
@@ -182,6 +224,7 @@ def run_scheduled_news_pipeline():
         logger.info(f"🔔 예정된 일일 뉴스 수집 시작: {now}")
         run_news_pipeline()  # 뉴스 수집 및 분석 실행
         news_cache.daily_task_last_run = now
+        news_cache.initial_fetch_done = True
         logger.info(f"✅ 일일 뉴스 수집 완료: {now}")
     except Exception as e:
         logger.error(f"❌ 예정된 뉴스 수집 실패: {str(e)}")
@@ -198,6 +241,23 @@ def run_scheduler():
         except Exception as e:
             logger.error(f"❌ 스케줄러 오류: {str(e)}")
             time.sleep(300)  # 오류 발생 시 5분 대기
+
+def run_news_pipeline():
+    """스케줄러에서 호출될 함수"""
+    pipeline.run_daily_collection()
+
+# 초기 데이터 수집 함수 추가
+def run_initial_fetch():
+    """서버 시작 시 호출되는 초기 데이터 수집 함수"""
+    try:
+        logger.info("🚀 서버 시작 시 초기 뉴스 수집을 시작합니다...")
+        run_news_pipeline()
+        update_news_cache()
+        news_cache.initial_fetch_done = True
+        news_cache.daily_task_last_run = datetime.now()
+        logger.info("✅ 초기 뉴스 수집 완료")
+    except Exception as e:
+        logger.error(f"❌ 초기 뉴스 수집 실패: {str(e)}")
 
 # --- API 엔드포인트 ---
 @app.get("/status")
@@ -216,6 +276,14 @@ async def get_news_data():
     try:
         if not news_cache.latest_data:
             update_news_cache()
+            
+            # 캐시가 비어있는 경우 초기 수집 실행 부분 제거
+            # if not news_cache.latest_data and not news_cache.initial_fetch_done:
+            #     logger.info("🔄 뉴스 데이터가 없어 즉시 수집을 시작합니다...")
+            #     run_news_pipeline()
+            #     update_news_cache()
+            #     news_cache.initial_fetch_done = True
+                
             if not news_cache.latest_data:
                 # 기본 데이터 반환
                 if DEFAULT_DATA_FILE.exists():
@@ -245,6 +313,15 @@ async def get_news_data():
         # news_list 필드가 없으면 빈 배열 추가
         if "news_list" not in news_cache.latest_data:
             news_cache.latest_data["news_list"] = []
+
+        # 뉴스 기사가 있지만 아직 중요도 정렬이 안된 경우 - 호출 방식 수정
+        elif news_cache.latest_data["news_list"] and not any("importance_score" in news for news in news_cache.latest_data["news_list"]):
+            try:
+                sorted_news = rank_news_by_importance(news_cache.latest_data["news_list"], limit=30)
+                news_cache.latest_data["news_list"] = sorted_news
+                logger.info(f"✅ API 요청 시 뉴스 데이터 중요도 정렬 완료: {len(sorted_news)}개")
+            except Exception as e:
+                logger.error(f"뉴스 정렬 오류: {str(e)}")
             
         return {
             "data": news_cache.latest_data,
@@ -265,7 +342,8 @@ async def get_news_data():
                     "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                 },
                 "total_articles": 0,
-                "time_range": "오류 발생"
+                "time_range": "오류 발생",
+                "news_list": []  # 빈 배열 추가
             },
             "metadata": {
                 "last_updated": datetime.now().isoformat(),
@@ -300,13 +378,32 @@ async def startup_event():
         logger.info("🔄 초기 데이터 로드 시작...")
         update_news_cache()  # 캐시 업데이트만 수행
         logger.info("✅ 초기 데이터 로드 완료")
+        
+        # Render.com 환경에서는 서버 시작 시 즉시 뉴스 수집 수행
+        if os.environ.get('RENDER') == 'true':
+            # 영구 저장소에 데이터가 없거나 24시간 이상 지난 경우에만 수집
+            should_fetch = True
+            if news_cache.last_update:
+                time_since_update = datetime.now() - news_cache.last_update
+                if time_since_update.total_seconds() < 86400:  # 24시간 이내
+                    should_fetch = False
+                    logger.info(f"⏭️ 최근 {int(time_since_update.total_seconds()/3600)}시간 전에 데이터가 업데이트되어 수집을 건너뜁니다.")
+            
+            if should_fetch:
+                import threading
+                logger.info("🔄 Render.com 환경에서 초기 데이터 수집 시작...")
+                initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
+                initial_fetch_thread.start()
+                logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
+        else:
+            logger.info("ℹ️ 로컬 환경에서는 자동 데이터 수집이 비활성화됩니다. '/refresh' 엔드포인트를 호출하여 수동으로 수집하세요.")
     except Exception as e:
         logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
     
     # 스케줄러 설정 - 명확하게 하나의 작업만 지정
     schedule.clear()  # 기존 스케줄 초기화
     schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)  # 매일 오전 6시에 뉴스 수집 및 분석
-    schedule.every(30).minutes.do(update_news_cache)  # 캐시 업데이트는 30분마다 유지 (5분→30분으로 변경)
+    schedule.every(30).minutes.do(update_news_cache)  # 캐시 업데이트는 30분마다 유지
     
     # 스케줄러가 이미 실행 중인지 확인
     if not news_cache.scheduler_running:

@@ -309,8 +309,8 @@ class _MainPageState extends State<MainPage>
                         side: BorderSide(
                           color:
                               isDark
-                                  ? Colors.white.withOpacity(0.05)
-                                  : Colors.grey.withOpacity(0.1),
+                                  ? Colors.white.withValues(alpha: 0.05)
+                                  : Colors.grey.withValues(alpha: 0.1),
                           width: 1,
                         ),
                       ),
@@ -327,7 +327,7 @@ class _MainPageState extends State<MainPage>
                                     color: (isDark
                                             ? Colors.blue
                                             : const Color(0xFF4361EE))
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -382,8 +382,8 @@ class _MainPageState extends State<MainPage>
                               decoration: BoxDecoration(
                                 color:
                                     isDark
-                                        ? Colors.white.withOpacity(0.03)
-                                        : Colors.grey.withOpacity(0.05),
+                                        ? Colors.white.withValues(alpha: 0.03)
+                                        : Colors.grey.withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -459,8 +459,8 @@ class _MainPageState extends State<MainPage>
                               side: BorderSide(
                                 color:
                                     isDark
-                                        ? Colors.white.withOpacity(0.05)
-                                        : Colors.grey.withOpacity(0.1),
+                                        ? Colors.white.withValues(alpha: 0.05)
+                                        : Colors.grey.withValues(alpha: 0.1),
                                 width: 1,
                               ),
                             ),
@@ -513,14 +513,14 @@ class _MainPageState extends State<MainPage>
                                           width: 48,
                                           height: 48,
                                           decoration: BoxDecoration(
-                                            color: candidateColor.withOpacity(
-                                              0.1,
+                                            color: candidateColor.withValues(
+                                              alpha: 0.1,
                                             ),
                                             shape: BoxShape.circle,
                                             boxShadow: [
                                               BoxShadow(
                                                 color: candidateColor
-                                                    .withOpacity(0.2),
+                                                    .withValues(alpha: 0.2),
                                                 blurRadius: 10,
                                                 spreadRadius: 0,
                                               ),
@@ -574,11 +574,11 @@ class _MainPageState extends State<MainPage>
                                           decoration: BoxDecoration(
                                             color:
                                                 isDark
-                                                    ? Colors.white.withOpacity(
-                                                      0.05,
+                                                    ? Colors.white.withValues(
+                                                      alpha: 0.05,
                                                     )
-                                                    : Colors.grey.withOpacity(
-                                                      0.05,
+                                                    : Colors.grey.withValues(
+                                                      alpha: 0.05,
                                                     ),
                                             shape: BoxShape.circle,
                                           ),
@@ -788,8 +788,8 @@ class _MainPageState extends State<MainPage>
                               side: BorderSide(
                                 color:
                                     isDark
-                                        ? Colors.white.withOpacity(0.05)
-                                        : Colors.grey.withOpacity(0.1),
+                                        ? Colors.white.withValues(alpha: 0.05)
+                                        : Colors.grey.withValues(alpha: 0.1),
                                 width: 1,
                               ),
                             ),
@@ -839,8 +839,12 @@ class _MainPageState extends State<MainPage>
                                       decoration: BoxDecoration(
                                         color:
                                             isDark
-                                                ? Colors.white.withOpacity(0.03)
-                                                : Colors.grey.withOpacity(0.05),
+                                                ? Colors.white.withValues(
+                                                  alpha: 0.03,
+                                                )
+                                                : Colors.grey.withValues(
+                                                  alpha: 0.05,
+                                                ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
@@ -867,14 +871,14 @@ class _MainPageState extends State<MainPage>
                                           decoration: BoxDecoration(
                                             color: _getSentimentColor(
                                               article['sentiment'] as String,
-                                            ).withOpacity(0.1),
+                                            ).withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
                                             border: Border.all(
                                               color: _getSentimentColor(
                                                 article['sentiment'] as String,
-                                              ).withOpacity(0.2),
+                                              ).withValues(alpha: 0.2),
                                             ),
                                           ),
                                           child: Text(
@@ -952,9 +956,9 @@ class _MainPageState extends State<MainPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

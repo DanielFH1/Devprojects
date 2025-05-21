@@ -13,6 +13,7 @@ import hashlib
 from dataclasses import dataclass
 import logging
 import backoff  # 백오프 재시도 라이브러리 추가
+import shutil   # 파일 복사를 위한 모듈 추가
 
 # 로깅 설정
 logging.basicConfig(
@@ -81,6 +82,59 @@ class NewsCollector:
                 self.collected_articles[news.unique_id] = news
         
         return list(self.collected_articles.values())
+
+# 뉴스 중요도 정렬 전역 함수 - 클래스 밖으로 이동
+def rank_news_by_importance(news_data: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
+    """뉴스를 중요도순으로 정렬하고 상위 N개만 반환"""
+    if not news_data:
+        return []
+        
+    # 후보자 및 키워드 정의
+    candidates = ["이재명", "김문수", "이준석"]
+    important_keywords = ["대선", "TV토론", "공약", "여론조사", "정책", "지지율", "선거", "당선", "투표"]
+    
+    # 중요도 점수 계산
+    for news in news_data:
+        importance_score = 0
+        
+        # 후보자 언급 점수
+        for candidate in candidates:
+            if candidate in news['title']:
+                importance_score += 15  # 제목에 후보자가 있으면 높은 점수
+            elif candidate in news['summary']:
+                importance_score += 8   # 요약에 후보자가 있으면 중간 점수
+                
+        # 감성 강도 점수 (중립보다 긍정/부정이 더 중요할 수 있음)
+        if news['sentiment'] == "긍정":
+            importance_score += 10
+        elif news['sentiment'] == "부정":
+            importance_score += 12  # 부정 뉴스가 보통 더 주목받음
+            
+        # 주요 키워드 점수
+        for keyword in important_keywords:
+            if keyword in news['title']:
+                importance_score += 8
+            elif keyword in news['summary']:
+                importance_score += 4
+        
+        # 제목 길이 보너스 (보통 중요한 기사는 제목이 길다)
+        title_length = len(news['title'])
+        if title_length > 30:
+            importance_score += 5
+        
+        # 최신 기사 보너스
+        try:
+            if '2025' in news['published_date']:  # 최신 연도 기사
+                importance_score += 10
+        except:
+            pass
+            
+        news['importance_score'] = importance_score
+    
+    # 중요도 순으로 정렬하고 상위 N개만 반환
+    sorted_news = sorted(news_data, key=lambda x: x.get('importance_score', 0), reverse=True)
+    logger.info(f"✅ 뉴스 {len(news_data)}개 중 중요도순으로 상위 {limit}개 선별 완료")
+    return sorted_news[:limit]
 
 class NewsAnalyzer:
     """뉴스 분석기 클래스"""
@@ -375,12 +429,15 @@ class NewsAnalyzer:
         logger.info("🔄 최종 요약 생성 중...")
         final_summary = self._create_final_summary(batch_summaries, time_range)
         
+        # 전역 함수로 뉴스 중요도 순으로 정렬
+        important_news = rank_news_by_importance(news_data, limit=30)
+        
         return {
             "trend_summary": final_summary,
             "candidate_stats": dict(candidate_stats),
             "total_articles": len(news_data),
             "time_range": time_range,
-            "news_list": news_data[:100]  # 최대 100개만 포함
+            "news_list": important_news  # 중요도순으로 정렬된 뉴스 목록
         }
 
 class NewsPipeline:
@@ -388,8 +445,27 @@ class NewsPipeline:
     def __init__(self):
         self.collector = NewsCollector()
         self.analyzer = NewsAnalyzer()
+        
+        # 경로 설정 - Render.com 호환성 추가
         self.assets_path = Path("assets")
         self.assets_path.mkdir(parents=True, exist_ok=True)
+        
+        # Render.com 영구 저장 디렉토리 설정
+        # Render.com은 /opt/render/project/src/ 경로가 영구적으로 유지됨
+        self.render_persistent_dir = None
+        if os.environ.get('RENDER') == 'true':  # Render.com 환경 감지
+            self.render_persistent_dir = Path("/opt/render/project/src/persistent_data")
+            self.render_persistent_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"📂 Render.com 영구 저장소 경로 설정: {self.render_persistent_dir}")
+            
+            # 이미 저장된 데이터가 있다면 assets로 복사
+            if self.render_persistent_dir.exists():
+                for json_file in self.render_persistent_dir.glob("trend_summary_*.json"):
+                    dest_file = self.assets_path / json_file.name
+                    if not dest_file.exists():
+                        shutil.copy(json_file, dest_file)
+                        logger.info(f"📋 영구 저장소에서 복원된 파일: {json_file.name}")
+        
         self.temp_storage: List[Dict[str, Any]] = []
         self.last_trend_summary_time = None
         self.last_run_date = None
@@ -418,9 +494,26 @@ class NewsPipeline:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
         filename = self.assets_path / f"trend_summary_{timestamp}.json"
         
+        # 로컬 assets 디렉토리에 저장
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(trend_data, f, ensure_ascii=False, indent=2)
         logger.info(f"✅ 트렌드 요약 저장 완료: {filename}")
+        
+        # Render.com 환경이라면 영구 저장소에도 저장
+        if self.render_persistent_dir:
+            persistent_file = self.render_persistent_dir / f"trend_summary_{timestamp}.json"
+            try:
+                with open(persistent_file, "w", encoding="utf-8") as f:
+                    json.dump(trend_data, f, ensure_ascii=False, indent=2)
+                logger.info(f"✅ 영구 저장소에 트렌드 요약 저장 완료: {persistent_file}")
+                
+                # 최신 파일을 가리키는 링크 파일 생성 (latest.json)
+                latest_link = self.render_persistent_dir / "trend_summary_latest.json"
+                with open(latest_link, "w", encoding="utf-8") as f:
+                    json.dump(trend_data, f, ensure_ascii=False, indent=2)
+                logger.info(f"✅ 최신 트렌드 요약 링크 생성 완료: {latest_link}")
+            except Exception as e:
+                logger.error(f"❌ 영구 저장소 저장 실패: {str(e)}")
     
     def run_daily_collection(self):
         """매일 실행되는 뉴스 수집 (오전 6시)"""
