@@ -143,18 +143,32 @@ news_cache = NewsCache()
 def update_news_cache():
     """assets 폴더에서 최신 뉴스 데이터를 읽어와 캐시를 업데이트"""
     try:
-        # 최신 뉴스 데이터 파일 찾기 - assets 디렉토리 우선 검사로 변경
+        # 최신 뉴스 데이터 파일 찾기 - 파일명 및 수정 시간 기준으로 정렬
         latest_file = None
         
         # 먼저 assets 디렉토리에서 최신 파일 찾기
         news_files = sorted(
             ASSETS_DIR.glob("trend_summary_*.json"),
-            key=lambda p: p.stat().st_mtime,
+            key=lambda p: (p.name, p.stat().st_mtime),  # 파일명도 정렬 기준에 추가
             reverse=True
         )
+        
+        # 파일명 기준으로 정렬하여 가장 최신 날짜의 파일을 사용
         if news_files:
-            latest_file = news_files[0]
-            logger.info(f"📂 assets 폴더에서 최신 파일 발견: {latest_file}")
+            # trend_summary_YYYY-MM-DD 형식의 파일명에서 날짜 추출하여 정렬
+            try:
+                # 날짜 기준으로 정렬 (파일명의 날짜 부분 추출)
+                latest_file = sorted(
+                    news_files,
+                    key=lambda p: p.name.split("_")[1:3], # 날짜와 시간 부분 추출
+                    reverse=True
+                )[0]
+                logger.info(f"📂 assets 폴더에서 최신 파일 발견 (날짜 기준): {latest_file}")
+            except Exception as e:
+                # 정렬 실패 시 수정 시간 기준으로 폴백
+                latest_file = news_files[0]
+                logger.warning(f"⚠️ 날짜 기준 정렬 실패, 수정 시간 기준 사용: {str(e)}")
+                logger.info(f"📂 assets 폴더에서 최신 파일 발견 (수정 시간 기준): {latest_file}")
         
         # assets에 파일이 없으면 영구 저장소 검사
         if not latest_file and PERSISTENT_DIR and PERSISTENT_DIR.exists():
@@ -285,8 +299,67 @@ def run_initial_fetch():
         # 뉴스 수집 실행 - 직접 pipeline 객체의 메서드 호출
         pipeline.run_daily_collection()
         
-        # 캐시 업데이트
-        update_news_cache()
+        # 수집 후 생성된 최신 파일을 즉시 찾기
+        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        expected_file = ASSETS_DIR / f"trend_summary_{current_timestamp}.json"
+        
+        # 정확한 타임스탬프 파일이 없다면 오늘 날짜의 최신 파일 찾기
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
+        
+        if expected_file.exists():
+            # 예상 파일이 존재하면 이 파일 사용
+            newest_file = expected_file
+            logger.info(f"✅ 새로 생성된 파일 발견: {newest_file}")
+        elif today_files:
+            # 오늘 생성된 파일 중 가장 최신 파일 사용
+            newest_file = sorted(today_files, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+            logger.info(f"✅ 오늘 생성된 최신 파일 발견: {newest_file}")
+        else:
+            # 그래도 없으면 일반 업데이트 로직 사용
+            update_news_cache()
+            logger.info("✅ 일반 캐시 업데이트 완료")
+            
+            # 상태 업데이트
+            news_cache.initial_fetch_done = True
+            news_cache.daily_task_last_run = datetime.now()
+            
+            logger.info("✅ 초기 뉴스 수집 완료")
+            return
+            
+        # 찾은 파일 직접 로드
+        try:
+            with open(newest_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 기본값 설정으로 null 방지
+                processed_data = {
+                    "trend_summary": data.get("trend_summary", "데이터를 수집 중입니다..."),
+                    "candidate_stats": data.get("candidate_stats", {
+                        "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                        "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                        "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                    }),
+                    "total_articles": data.get("total_articles", 0),
+                    "time_range": data.get("time_range", "데이터 수집 중"),
+                    "news_list": data.get("news_list", [])
+                }
+                
+                # 뉴스 데이터가 있으면 중요도 기준으로 정렬
+                if "news_list" in processed_data and processed_data["news_list"]:
+                    try:
+                        sorted_news = rank_news_by_importance(processed_data["news_list"], limit=30)
+                        processed_data["news_list"] = sorted_news
+                        logger.info(f"✅ 뉴스 데이터 중요도 정렬 완료: {len(sorted_news)}개")
+                    except Exception as e:
+                        logger.error(f"뉴스 정렬 오류: {str(e)}")
+                
+                # 캐시 직접 업데이트
+                news_cache.update(processed_data)
+                logger.info(f"✅ 뉴스 캐시 직접 업데이트 완료: {newest_file.name}")
+        except Exception as e:
+            logger.error(f"❌ 최신 파일 로드 실패: {str(e)}")
+            # 실패 시 기본 업데이트 로직 사용
+            update_news_cache()
         
         # 상태 업데이트
         news_cache.initial_fetch_done = True
@@ -296,22 +369,16 @@ def run_initial_fetch():
         
         # 영구 저장소에 최신 파일 복사 (Render.com 환경에서만)
         if os.environ.get('RENDER') == 'true' and PERSISTENT_DIR:
-            # assets 디렉토리에서 최신 파일 찾기
-            news_files = sorted(
-                ASSETS_DIR.glob("trend_summary_*.json"),
-                key=lambda p: p.stat().st_mtime,
-                reverse=True
-            )
-            if news_files:
-                latest_file = news_files[0]
-                dest_file = PERSISTENT_DIR / "trend_summary_latest.json"
-                shutil.copy(latest_file, dest_file)
-                logger.info(f"📋 최신 데이터 파일을 영구 저장소에 복사: {latest_file.name} -> trend_summary_latest.json")
-                
-                # 원본 파일도 영구 저장소에 복사
-                perm_file = PERSISTENT_DIR / latest_file.name
-                shutil.copy(latest_file, perm_file)
-                logger.info(f"📋 데이터 파일을 영구 저장소에 복사: {latest_file.name}")
+            # 방금 찾은 최신 파일 사용
+            latest_file = newest_file
+            dest_file = PERSISTENT_DIR / "trend_summary_latest.json"
+            shutil.copy(latest_file, dest_file)
+            logger.info(f"📋 최신 데이터 파일을 영구 저장소에 복사: {latest_file.name} -> trend_summary_latest.json")
+            
+            # 원본 파일도 영구 저장소에 복사
+            perm_file = PERSISTENT_DIR / latest_file.name
+            shutil.copy(latest_file, perm_file)
+            logger.info(f"📋 데이터 파일을 영구 저장소에 복사: {latest_file.name}")
     except Exception as e:
         logger.error(f"❌ 초기 뉴스 수집 실패: {str(e)}")
 
@@ -330,6 +397,7 @@ async def get_status():
 async def get_news_data():
     """뉴스 데이터 조회 엔드포인트"""
     try:
+        # 캐시에 데이터가 없으면 업데이트
         if not news_cache.latest_data:
             update_news_cache()
                 
@@ -369,30 +437,63 @@ async def get_news_data():
                     }
                 }
         
-        # news_list 필드가 없거나 비어있으면 빈 배열 추가 또는 강제 데이터 수집
+        # news_list 필드가 없거나 비어있으면 최신 파일 강제 확인
         if "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
-            logger.warning("⚠️ news_list가 비어있어 기본 데이터를 사용합니다. 데이터 수집이 필요합니다.")
+            logger.warning("⚠️ news_list가 비어있습니다. 최신 파일을 강제로 확인합니다.")
             
-            # 강제로 뉴스 데이터 수집 시작 (백그라운드)
-            if not news_cache.initial_fetch_done:
-                import threading
-                initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
-                initial_fetch_thread.start()
-                logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
-                news_cache.initial_fetch_done = True
+            # 오늘 날짜의 파일을 찾아서 직접 로드
+            today = datetime.now().strftime("%Y-%m-%d")
+            today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
             
-            news_cache.latest_data["news_list"] = []
+            if today_files:
+                # 오늘 생성된 파일 중 가장 최신 파일 사용
+                newest_file = sorted(today_files, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+                logger.info(f"✅ 오늘 생성된 최신 파일 발견: {newest_file}")
+                
+                try:
+                    with open(newest_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        
+                        # 뉴스 데이터 확인
+                        if "news_list" in data and data["news_list"]:
+                            # 중요도로 정렬
+                            sorted_news = rank_news_by_importance(data["news_list"], limit=30)
+                            data["news_list"] = sorted_news
+                            
+                            # 캐시 업데이트
+                            news_cache.update(data)
+                            logger.info(f"✅ 최신 파일에서 뉴스 {len(sorted_news)}개 로드 완료")
+                        else:
+                            logger.warning(f"⚠️ 최신 파일에도 news_list가 비어 있습니다: {newest_file}")
+                except Exception as e:
+                    logger.error(f"❌ 최신 파일 로드 실패: {str(e)}")
             
-            # 사용자에게 데이터 수집 중임을 알리는 메시지 추가
-            return {
-                "data": news_cache.latest_data,
-                "metadata": {
-                    "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else datetime.now().isoformat(),
-                    "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
-                    "status": "collecting",
-                    "message": "뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요."
+            # 여전히 뉴스 목록이 없으면 데이터 수집 시작
+            if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
+                logger.warning("⚠️ news_list가 여전히 비어있어 기본 데이터를 사용합니다. 데이터 수집이 필요합니다.")
+                
+                # 강제로 뉴스 데이터 수집 시작 (백그라운드)
+                if not news_cache.initial_fetch_done:
+                    import threading
+                    initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
+                    initial_fetch_thread.start()
+                    logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
+                    news_cache.initial_fetch_done = True
+                
+                # news_list 필드가 없으면 빈 배열 추가
+                if "news_list" not in news_cache.latest_data:
+                    news_cache.latest_data["news_list"] = []
+                
+                # 사용자에게 데이터 수집 중임을 알리는 메시지 추가
+                return {
+                    "data": news_cache.latest_data,
+                    "metadata": {
+                        "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else datetime.now().isoformat(),
+                        "next_update": (datetime.now() + timedelta(hours=1)).isoformat(),
+                        "status": "collecting",
+                        "message": "뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요."
+                    }
                 }
-            }
         
         # 뉴스 기사가 있지만 아직 중요도 정렬이 안된 경우
         elif news_cache.latest_data["news_list"] and not any("importance_score" in news for news in news_cache.latest_data["news_list"]):
@@ -460,14 +561,23 @@ async def startup_event():
         update_news_cache()  # 캐시 업데이트만 수행
         logger.info("✅ 초기 데이터 로드 완료")
         
-        # Render.com 환경에서는 서버 시작 시 데이터 수집 수행
+        # Render.com 환경에서는 서버 시작 시 항상 데이터 수집 수행
         if os.environ.get('RENDER') == 'true':
             logger.info("🔄 Render.com 환경에서 초기 데이터 수집 시작...")
-            # 강제로 데이터 수집 시작 (백그라운드)
+            
+            # 오늘 날짜의 파일이 이미 있는지 확인
+            today = datetime.now().strftime("%Y-%m-%d")
+            today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
+            
+            # 오늘 데이터가 이미 있어도 항상 새로 수집 (초기 배포 시만)
             import threading
             initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
             initial_fetch_thread.start()
             logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
+            
+            # 캐시에 데이터가 있는지, news_list가 비어있는지 확인
+            if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
+                logger.warning("⚠️ 캐시에 뉴스 목록이 없습니다. 데이터 수집이 필요합니다.")
         else:
             logger.info("ℹ️ 로컬 환경에서는 자동 데이터 수집이 비활성화됩니다. '/refresh' 엔드포인트를 호출하여 수동으로 수집하세요.")
     except Exception as e:
