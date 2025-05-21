@@ -390,7 +390,7 @@ async def startup_event():
                     logger.info(f"⏭️ 최근 {int(time_since_update.total_seconds()/3600)}시간 전에 데이터가 업데이트되어 수집을 건너뜁니다.")
             
             if should_fetch:
-                import threading
+                # 여기서 threading 모듈을 로컬로 임포트하지 않고 전역 스코프의 모듈을 사용
                 logger.info("🔄 Render.com 환경에서 초기 데이터 수집 시작...")
                 initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
                 initial_fetch_thread.start()
