@@ -26,6 +26,13 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
 
+# OpenAI API 키 검사 추가
+openai_api_key = os.getenv('OPENAI_API_KEY')
+if not openai_api_key:
+    logger.error("❌ OPENAI_API_KEY 환경 변수가 설정되지 않았습니다. 뉴스 분석 기능이 작동하지 않을 수 있습니다.")
+else:
+    logger.info("✅ OPENAI_API_KEY 환경 변수가 설정되어 있습니다.")
+
 # !scrapper.py의 함수들을 임포트
 from news_scraper import run_news_pipeline, NewsPipeline, rank_news_by_importance, pipeline
 
@@ -561,25 +568,37 @@ async def startup_event():
         update_news_cache()  # 캐시 업데이트만 수행
         logger.info("✅ 초기 데이터 로드 완료")
         
-        # Render.com 환경에서는 서버 시작 시 항상 데이터 수집 수행
-        if os.environ.get('RENDER') == 'true':
-            logger.info("🔄 Render.com 환경에서 초기 데이터 수집 시작...")
-            
-            # 오늘 날짜의 파일이 이미 있는지 확인
-            today = datetime.now().strftime("%Y-%m-%d")
-            today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
-            
-            # 오늘 데이터가 이미 있어도 항상 새로 수집 (초기 배포 시만)
+        # 항상 데이터 수집 수행하도록 수정 (Render.com 환경이 아니어도)
+        logger.info("🔄 초기 데이터 수집 시작...")
+        
+        # 오늘 날짜의 파일이 이미 있는지 확인
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
+        
+        # 오늘 데이터가 없으면 항상 새로 수집
+        if not today_files:
+            logger.info("🔄 오늘 생성된 데이터가 없어 새로 수집합니다.")
             import threading
             initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
             initial_fetch_thread.start()
             logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
-            
-            # 캐시에 데이터가 있는지, news_list가 비어있는지 확인
-            if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
-                logger.warning("⚠️ 캐시에 뉴스 목록이 없습니다. 데이터 수집이 필요합니다.")
         else:
-            logger.info("ℹ️ 로컬 환경에서는 자동 데이터 수집이 비활성화됩니다. '/refresh' 엔드포인트를 호출하여 수동으로 수집하세요.")
+            logger.info(f"✅ 오늘 생성된 데이터 파일이 이미 있습니다: {today_files[0].name}")
+            
+        # 캐시에 데이터가 있는지, news_list가 비어있는지 확인
+        if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
+            logger.warning("⚠️ 캐시에 뉴스 목록이 없습니다. 데이터 수집이 필요합니다.")
+            # 기본 데이터 파일에서 다시 로드 시도
+            default_data_path = ASSETS_DIR / "trend_summary_default.json"
+            if default_data_path.exists():
+                try:
+                    with open(default_data_path, "r", encoding="utf-8") as f:
+                        default_data = json.load(f)
+                        if "news_list" in default_data and default_data["news_list"]:
+                            logger.info("✅ 기본 데이터 파일에서 뉴스 목록을 로드했습니다.")
+                            news_cache.update(default_data)
+                except Exception as e:
+                    logger.error(f"❌ 기본 데이터 파일 로드 실패: {str(e)}")
     except Exception as e:
         logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
     
