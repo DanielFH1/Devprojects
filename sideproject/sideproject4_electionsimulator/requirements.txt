@@ -3,6 +3,7 @@ uvicorn>=0.15.0
 python-multipart>=0.0.5
 python-dotenv>=0.19.0
 gnews>=0.2.7
+newsapi-python>=0.2.6
 openai>=1.0.0
 schedule>=1.1.0
 requests>=2.26.0

@@ -27,7 +27,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from news_scraper import NewsPipeline, rank_news_by_importance
 import logging
 
 # 로깅 설정
@@ -36,6 +35,25 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# news_scraper 모듈 import (오류 처리 포함)
+try:
+    from news_scraper import NewsPipeline, rank_news_by_importance
+    NEWS_SCRAPER_AVAILABLE = True
+    logger.info("✅ news_scraper 모듈 로드 성공")
+except ImportError as e:
+    logger.error(f"❌ news_scraper 모듈 로드 실패: {e}")
+    NEWS_SCRAPER_AVAILABLE = False
+    
+    # 더미 클래스 생성
+    class NewsPipeline:
+        def __init__(self):
+            pass
+        def run_daily_collection(self):
+            logger.warning("⚠️ 뉴스 수집 기능이 비활성화되었습니다.")
+    
+    def rank_news_by_importance(news_data, limit=30):
+        return news_data[:limit]
 
 # === 상수 및 설정 ===
 ASSETS_DIR = parent_dir / "assets"
@@ -259,6 +277,10 @@ def update_news_cache() -> None:
 # === 뉴스 수집 함수 ===
 def force_news_collection() -> bool:
     """강제 뉴스 수집"""
+    if not NEWS_SCRAPER_AVAILABLE:
+        logger.warning("⚠️ 뉴스 수집 기능이 비활성화되어 있습니다.")
+        return False
+        
     try:
         logger.info("🔥 강제 뉴스 수집을 시작합니다...")
         
@@ -571,6 +593,14 @@ async def startup_event():
     try:
         logger.info("🚀 서버 시작 - 초기화 중...")
         
+        # 뉴스 수집 기능 상태 확인
+        if not NEWS_SCRAPER_AVAILABLE:
+            logger.warning("⚠️ 뉴스 수집 기능이 비활성화되었습니다. 기본 데이터만 제공됩니다.")
+            # 기본 데이터로 캐시 초기화
+            default_data = data_processor.create_default_data("뉴스 수집 기능이 일시적으로 비활성화되었습니다.")
+            news_cache.update(default_data)
+            return
+        
         # 캐시 초기 업데이트
         update_news_cache()
         logger.info("✅ 초기 캐시 업데이트 완료")
@@ -617,12 +647,13 @@ async def startup_event():
         
     except Exception as e:
         logger.error(f"❌ 서버 시작 이벤트 실패: {str(e)}")
-        # 오류 발생 시에도 강제 수집 시도
+        # 오류 발생 시에도 기본 데이터로 초기화
         try:
-            threading.Thread(target=force_news_collection, daemon=True).start()
-            logger.info("🔄 오류 발생으로 인한 백그라운드 강제 뉴스 수집 시작")
+            default_data = data_processor.create_default_data(f"서버 초기화 중 오류 발생: {str(e)}")
+            news_cache.update(default_data)
+            logger.info("🔄 기본 데이터로 초기화 완료")
         except Exception as e2:
-            logger.error(f"❌ 강제 수집도 실패: {str(e2)}")
+            logger.error(f"❌ 기본 데이터 초기화도 실패: {str(e2)}")
 
 # === Flutter 웹 앱 서빙 ===
 if FLUTTER_WEB_DIR.exists():
