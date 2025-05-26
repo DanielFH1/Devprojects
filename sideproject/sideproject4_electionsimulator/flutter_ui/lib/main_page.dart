@@ -84,30 +84,82 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
       // 캐시 업데이트 먼저 시도
       await _updateCache();
 
-      // 트렌드 데이터 가져오기
-      final response = await http
-          .get(
-            Uri.parse('$baseUrl/api/trend-summary'),
-            headers: {'Accept': 'application/json'},
-          )
-          .timeout(const Duration(seconds: 30));
+      // 트렌드 데이터 가져오기 - 여러 엔드포인트 시도
+      http.Response? response;
+      String? lastError;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          _trendData = data;
-          _isLoading = false;
-        });
+      // 1차 시도: /api/trend-summary
+      try {
+        debugPrint('🔄 API 호출 시도: $baseUrl/api/trend-summary');
+        response = await http
+            .get(
+              Uri.parse('$baseUrl/api/trend-summary'),
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 45));
+        debugPrint('✅ API 응답 성공: ${response.statusCode}');
+      } catch (e) {
+        lastError = e.toString();
+        debugPrint('❌ /api/trend-summary 실패: $e');
 
-        // 애니메이션 시작
-        _fadeController.forward();
-        _slideController.forward();
+        // 2차 시도: /news (레거시 엔드포인트)
+        try {
+          debugPrint('🔄 레거시 API 호출 시도: $baseUrl/news');
+          response = await http
+              .get(
+                Uri.parse('$baseUrl/news'),
+                headers: {
+                  'Accept': 'application/json',
+                  'Content-Type': 'application/json',
+                },
+              )
+              .timeout(const Duration(seconds: 45));
+          debugPrint('✅ 레거시 API 응답 성공: ${response.statusCode}');
+        } catch (e2) {
+          debugPrint('❌ /news도 실패: $e2');
+          lastError = '$lastError, 레거시 API도 실패: $e2';
+        }
+      }
+
+      if (response != null && response.statusCode == 200) {
+        final responseBody = response.body;
+        debugPrint('📄 응답 본문 길이: ${responseBody.length}');
+
+        dynamic data;
+        try {
+          data = json.decode(responseBody);
+
+          // 레거시 응답 형식 처리
+          if (data is Map && data.containsKey('data')) {
+            data = data['data'];
+          }
+
+          setState(() {
+            _trendData = data;
+            _isLoading = false;
+          });
+
+          // 애니메이션 시작
+          _fadeController.forward();
+          _slideController.forward();
+
+          debugPrint('✅ 데이터 로딩 완료');
+        } catch (e) {
+          throw Exception('JSON 파싱 실패: $e');
+        }
       } else {
-        throw Exception('서버 응답 오류: ${response.statusCode}');
+        throw Exception(
+          '서버 응답 오류: ${response?.statusCode ?? "응답 없음"}, 마지막 오류: $lastError',
+        );
       }
     } catch (e) {
+      debugPrint('❌ 전체 데이터 로딩 실패: $e');
       setState(() {
-        _errorMessage = '데이터를 불러오는 중 오류가 발생했습니다: ${e.toString()}';
+        _errorMessage =
+            '데이터를 불러오는 중 오류가 발생했습니다.\n\n상세 오류: ${e.toString()}\n\n서버가 시작 중일 수 있습니다. 잠시 후 다시 시도해주세요.';
         _isLoading = false;
       });
     }
@@ -115,15 +167,20 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
 
   Future<void> _updateCache() async {
     try {
-      await http
+      debugPrint('🔄 캐시 업데이트 시도');
+      final response = await http
           .post(
             Uri.parse('$baseUrl/api/update-cache'),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
+      debugPrint('✅ 캐시 업데이트 응답: ${response.statusCode}');
     } catch (e) {
       // 캐시 업데이트 실패는 무시 (메인 데이터 로딩에 영향 없음)
-      debugPrint('캐시 업데이트 실패: $e');
+      debugPrint('⚠️ 캐시 업데이트 실패: $e');
     }
   }
 

@@ -98,15 +98,24 @@ class _NewsPageState extends State<NewsPage> with TickerProviderStateMixin {
       await _updateCache();
 
       // 뉴스 데이터 가져오기
+      debugPrint('🔄 뉴스 API 호출 시도: $baseUrl/api/trend-summary');
       final response = await http
           .get(
             Uri.parse('$baseUrl/api/trend-summary'),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 45));
+
+      debugPrint('✅ 뉴스 API 응답: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final responseBody = response.body;
+        debugPrint('📄 뉴스 응답 본문 길이: ${responseBody.length}');
+
+        final data = json.decode(responseBody);
         setState(() {
           _newsData = data;
           _isLoading = false;
@@ -115,12 +124,16 @@ class _NewsPageState extends State<NewsPage> with TickerProviderStateMixin {
         // 애니메이션 시작
         _fadeController.forward();
         _slideController.forward();
+
+        debugPrint('✅ 뉴스 데이터 로딩 완료');
       } else {
         throw Exception('서버 응답 오류: ${response.statusCode}');
       }
     } catch (e) {
+      debugPrint('❌ 뉴스 데이터 로딩 실패: $e');
       setState(() {
-        _errorMessage = '뉴스 데이터를 불러오는 중 오류가 발생했습니다: ${e.toString()}';
+        _errorMessage =
+            '뉴스 데이터를 불러오는 중 오류가 발생했습니다.\n\n상세 오류: ${e.toString()}\n\n서버가 시작 중일 수 있습니다. 잠시 후 다시 시도해주세요.';
         _isLoading = false;
       });
     }
@@ -128,15 +141,20 @@ class _NewsPageState extends State<NewsPage> with TickerProviderStateMixin {
 
   Future<void> _updateCache() async {
     try {
-      await http
+      debugPrint('🔄 뉴스 페이지 캐시 업데이트 시도');
+      final response = await http
           .post(
             Uri.parse('$baseUrl/api/update-cache'),
-            headers: {'Accept': 'application/json'},
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 15));
+      debugPrint('✅ 뉴스 페이지 캐시 업데이트 응답: ${response.statusCode}');
     } catch (e) {
       // 캐시 업데이트 실패는 무시
-      debugPrint('캐시 업데이트 실패: $e');
+      debugPrint('⚠️ 뉴스 페이지 캐시 업데이트 실패: $e');
     }
   }
 
