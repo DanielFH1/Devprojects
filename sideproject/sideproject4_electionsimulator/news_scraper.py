@@ -1,19 +1,24 @@
-from gnews import GNews
-import openai
-import datetime
-import json
-import schedule
-import time
-from collections import defaultdict
-from pathlib import Path
+"""
+대선 뉴스 수집 및 분석 시스템
+- 뉴스 수집 (NewsAPI)
+- 감성 분석 (OpenAI GPT)
+- 트렌드 분석 및 요약
+"""
+
 import os
-from dotenv import load_dotenv
-from typing import List, Dict, Any, Optional
+import json
+import time
 import hashlib
-from dataclasses import dataclass
 import logging
-import backoff  # 백오프 재시도 라이브러리 추가
-import shutil   # 파일 복사를 위한 모듈 추가
+from pathlib import Path
+from datetime import datetime, timedelta
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+
+import openai
+import backoff
+import requests
+from newsapi import NewsApiClient
 
 # 로깅 설정
 logging.basicConfig(
@@ -22,16 +27,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# .env 파일에서 환경 변수 로드
-load_dotenv()
+# === 설정 및 상수 ===
+ASSETS_DIR = Path("assets")
+CACHE_DIR = Path("cache")
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-# API 키를 환경 변수에서 가져오기
-openai.api_key = os.getenv('OPENAI_API_KEY')
+# API 키 설정
+NEWS_API_KEY = os.getenv('NEWS_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-# API 키가 없을 경우 에러 발생
-if not openai.api_key:
-    raise ValueError("OPENAI_API_KEY 환경 변수가 설정되지 않았습니다. .env 파일을 확인해주세요.")
+if not NEWS_API_KEY:
+    logger.error("❌ NEWS_API_KEY 환경변수가 설정되지 않았습니다.")
+if not OPENAI_API_KEY:
+    logger.error("❌ OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
+else:
+    openai.api_key = OPENAI_API_KEY
 
+# 검색 키워드 설정
+SEARCH_QUERIES = [
+    "이재명 대선",
+    "김문수 대선", 
+    "이준석 대선",
+    "2025 대선",
+    "21대 대선"
+]
+
+# === 데이터 클래스 ===
 @dataclass
 class NewsArticle:
     """뉴스 기사 데이터 클래스"""
@@ -40,186 +62,189 @@ class NewsArticle:
     url: str
     published_date: str
     source: str
-    query: str  # 어떤 검색어로 찾았는지 기록
+    query: str
     
     @property
     def unique_id(self) -> str:
         """기사 고유 ID 생성 (URL 기반)"""
         return hashlib.md5(self.url.encode()).hexdigest()
 
+# === 뉴스 수집 클래스 ===
 class NewsCollector:
-    """뉴스 수집기 클래스"""
+    """뉴스 수집 담당 클래스"""
+    
     def __init__(self, period: str = "12h", max_results: int = 20):
-        self.gnews = GNews(language="ko", country="KR", period=period, max_results=max_results)
-        self.search_queries = [
-            "대선", "이재명", "김문수", "이준석", 
-            "TV토론", "공약", "여론조사", "후보", 
-            "정책", "선거"
-        ]
-        self.collected_articles: Dict[str, NewsArticle] = {}
-    
+        self.period = period
+        self.max_results = max_results
+        self.client = NewsApiClient(api_key=NEWS_API_KEY) if NEWS_API_KEY else None
+        
+        if not self.client:
+            logger.warning("⚠️ NewsAPI 클라이언트를 초기화할 수 없습니다.")
+
     def fetch_news(self, query: str) -> List[Dict[str, Any]]:
-        """단일 쿼리로 뉴스 수집"""
-        try:
-            return self.gnews.get_news(query)
-        except Exception as e:
-            logger.error(f"뉴스 수집 실패 (쿼리: {query}): {str(e)}")
+        """특정 키워드로 뉴스 검색"""
+        if not self.client:
+            logger.error("❌ NewsAPI 클라이언트가 없습니다.")
             return []
-    
-    def collect_all_news(self) -> List[NewsArticle]:
-        """모든 쿼리로 뉴스 수집 및 중복 제거"""
-        logger.info(f"🔍 {len(self.search_queries)}개의 검색어로 뉴스 수집을 시작합니다...")
-        logger.info(f"검색어 목록: {', '.join(self.search_queries)}")
-        
-        total_collected = 0
-        for i, query in enumerate(self.search_queries, 1):
-            logger.info(f"🔍 [{i}/{len(self.search_queries)}] '{query}' 검색 중...")
-            try:
-                articles = self.fetch_news(query)
-                logger.info(f"✅ '{query}': {len(articles)}개 기사 수집")
-                
-                for article in articles:
-                    try:
-                        news = NewsArticle(
-                            title=article.get('title', '제목 없음'),
-                            description=article.get('description', '설명 없음'),
-                            url=article.get('url', ''),
-                            published_date=article.get('published date', ''),
-                            source=article.get('publisher', {}).get('title', '출처 불명') if isinstance(article.get('publisher'), dict) else str(article.get('publisher', '출처 불명')),
-                            query=query
-                        )
-                        
-                        # URL이 유효한 경우만 추가
-                        if news.url and news.url.startswith('http'):
-                            self.collected_articles[news.unique_id] = news
-                            total_collected += 1
-                        else:
-                            logger.warning(f"⚠️ 유효하지 않은 URL: {news.url}")
-                            
-                    except Exception as e:
-                        logger.error(f"❌ 기사 처리 중 오류: {str(e)}")
-                        continue
-                        
-            except Exception as e:
-                logger.error(f"❌ '{query}' 검색 중 오류: {str(e)}")
-                continue
-        
-        unique_articles = list(self.collected_articles.values())
-        logger.info(f"📊 수집 완료: 총 {total_collected}개 수집, 중복 제거 후 {len(unique_articles)}개")
-        
-        return unique_articles
-
-# 뉴스 중요도 정렬 전역 함수 - 클래스 밖으로 이동
-def rank_news_by_importance(news_data: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
-    """뉴스를 중요도순으로 정렬하고 상위 N개만 반환"""
-    if not news_data:
-        return []
-        
-    # 후보자 및 키워드 정의
-    candidates = ["이재명", "김문수", "이준석"]
-    important_keywords = ["대선", "TV토론", "공약", "여론조사", "정책", "지지율", "선거", "당선", "투표"]
-    
-    # 중요도 점수 계산
-    for news in news_data:
-        importance_score = 0
-        
-        # 후보자 언급 점수
-        for candidate in candidates:
-            if candidate in news['title']:
-                importance_score += 15  # 제목에 후보자가 있으면 높은 점수
-            elif candidate in news['summary']:
-                importance_score += 8   # 요약에 후보자가 있으면 중간 점수
-                
-        # 감성 강도 점수 (중립보다 긍정/부정이 더 중요할 수 있음)
-        if news['sentiment'] == "긍정":
-            importance_score += 10
-        elif news['sentiment'] == "부정":
-            importance_score += 12  # 부정 뉴스가 보통 더 주목받음
             
-        # 주요 키워드 점수
-        for keyword in important_keywords:
-            if keyword in news['title']:
-                importance_score += 8
-            elif keyword in news['summary']:
-                importance_score += 4
-        
-        # 제목 길이 보너스 (보통 중요한 기사는 제목이 길다)
-        title_length = len(news['title'])
-        if title_length > 30:
-            importance_score += 5
-        
-        # 최신 기사 보너스
         try:
-            if '2025' in news['published_date']:  # 최신 연도 기사
-                importance_score += 10
-        except:
-            pass
+            logger.info(f"🔍 뉴스 검색 중: '{query}'")
             
-        news['importance_score'] = importance_score
-    
-    # 중요도 순으로 정렬하고 상위 N개만 반환
-    sorted_news = sorted(news_data, key=lambda x: x.get('importance_score', 0), reverse=True)
-    logger.info(f"✅ 뉴스 {len(news_data)}개 중 중요도순으로 상위 {limit}개 선별 완료")
-    return sorted_news[:limit]
+            # 시간 범위 계산
+            to_date = datetime.now()
+            from_date = to_date - timedelta(hours=int(self.period.replace('h', '')))
+            
+            response = self.client.get_everything(
+                q=query,
+                language='ko',
+                sort_by='publishedAt',
+                from_param=from_date.strftime('%Y-%m-%d'),
+                to=to_date.strftime('%Y-%m-%d'),
+                page_size=self.max_results
+            )
+            
+            articles = response.get('articles', [])
+            logger.info(f"✅ '{query}' 검색 결과: {len(articles)}개 기사")
+            return articles
+            
+        except Exception as e:
+            logger.error(f"❌ 뉴스 검색 실패 '{query}': {str(e)}")
+            return []
 
+    def collect_all_news(self) -> List[NewsArticle]:
+        """모든 키워드로 뉴스 수집"""
+        all_articles = []
+        seen_urls = set()
+        
+        logger.info(f"📰 뉴스 수집 시작 - 키워드: {SEARCH_QUERIES}")
+        
+        for query in SEARCH_QUERIES:
+            articles = self.fetch_news(query)
+            
+            for article in articles:
+                url = article.get('url', '')
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    
+                    news_article = NewsArticle(
+                        title=article.get('title', ''),
+                        description=article.get('description', ''),
+                        url=url,
+                        published_date=article.get('publishedAt', ''),
+                        source=article.get('source', {}).get('name', ''),
+                        query=query
+                    )
+                    all_articles.append(news_article)
+        
+        logger.info(f"✅ 총 {len(all_articles)}개의 고유 기사 수집 완료")
+        return all_articles
+
+# === 뉴스 중요도 평가 함수 ===
+def rank_news_by_importance(news_data: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
+    """뉴스 중요도 기준으로 정렬"""
+    try:
+        logger.info(f"📊 뉴스 중요도 평가 시작: {len(news_data)}개 기사")
+        
+        for article in news_data:
+            score = 0
+            title = article.get('title', '').lower()
+            summary = article.get('summary', '').lower()
+            
+            # 후보자 언급 점수
+            candidates = ['이재명', '김문수', '이준석']
+            for candidate in candidates:
+                if candidate in title or candidate in summary:
+                    score += 10
+            
+            # 키워드 점수
+            important_keywords = ['대선', '선거', '후보', '정치', '여론조사', '지지율']
+            for keyword in important_keywords:
+                if keyword in title:
+                    score += 5
+                if keyword in summary:
+                    score += 3
+            
+            # 감성 점수
+            sentiment = article.get('sentiment', '중립')
+            if sentiment in ['긍정', '부정']:
+                score += 3
+            
+            # 제목 길이 점수 (너무 짧거나 긴 제목은 감점)
+            title_length = len(title)
+            if 10 <= title_length <= 50:
+                score += 2
+            
+            article['importance_score'] = score
+        
+        # 중요도 순으로 정렬
+        sorted_news = sorted(news_data, key=lambda x: x.get('importance_score', 0), reverse=True)
+        result = sorted_news[:limit]
+        
+        logger.info(f"✅ 중요도 평가 완료: 상위 {len(result)}개 기사 선별")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ 뉴스 중요도 평가 실패: {str(e)}")
+        return news_data[:limit]
+
+# === 뉴스 분석 클래스 ===
 class NewsAnalyzer:
-    """뉴스 분석기 클래스"""
-    def __init__(self):
-        self.candidate_list = ["이재명", "김문수", "이준석"]
-        self.cache_dir = Path("cache")
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        # API 사용량 모니터링을 위한 카운터 추가
-        self.api_calls_count = 0
-        self.last_reset_time = datetime.datetime.now()
+    """뉴스 분석 담당 클래스 (OpenAI GPT 사용)"""
     
+    def __init__(self):
+        self.api_usage_count = 0
+        self.daily_limit = 100
+        self.cache_enabled = True
+
     def _get_cache_path(self, article_id: str, analysis_type: str) -> Path:
         """캐시 파일 경로 생성"""
-        return self.cache_dir / f"{article_id}_{analysis_type}.json"
-    
+        return CACHE_DIR / f"{analysis_type}_{article_id}.json"
+
     def _load_from_cache(self, article_id: str, analysis_type: str) -> Optional[str]:
         """캐시에서 분석 결과 로드"""
+        if not self.cache_enabled:
+            return None
+            
         cache_path = self._get_cache_path(article_id, analysis_type)
         if cache_path.exists():
             try:
-                with open(cache_path, "r", encoding="utf-8") as f:
+                with open(cache_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    # 캐시 만료 시간을 24시간에서 7일로 연장
-                    if datetime.datetime.now().timestamp() - data.get("timestamp", 0) < 7 * 86400:
-                        logger.info(f"캐시에서 {analysis_type} 결과 로드: {article_id}")
-                        return data.get("result")
+                    # 캐시가 24시간 이내인지 확인
+                    cache_time = datetime.fromisoformat(data['timestamp'])
+                    if datetime.now() - cache_time < timedelta(hours=24):
+                        logger.debug(f"📋 캐시에서 로드: {analysis_type}_{article_id}")
+                        return data['result']
                     else:
-                        logger.info(f"캐시 만료됨: {article_id}_{analysis_type}")
+                        cache_path.unlink()  # 오래된 캐시 삭제
             except Exception as e:
-                logger.error(f"캐시 로드 실패: {str(e)}")
+                logger.warning(f"⚠️ 캐시 로드 실패: {str(e)}")
         return None
-    
+
     def _save_to_cache(self, article_id: str, analysis_type: str, result: str):
         """분석 결과를 캐시에 저장"""
+        if not self.cache_enabled:
+            return
+            
         cache_path = self._get_cache_path(article_id, analysis_type)
         try:
-            with open(cache_path, "w", encoding="utf-8") as f:
-                json.dump({
-                    "result": result,
-                    "timestamp": datetime.datetime.now().timestamp()
-                }, f, ensure_ascii=False, indent=2)
-            logger.info(f"캐시에 저장 완료: {article_id}_{analysis_type}")
+            cache_data = {
+                'timestamp': datetime.now().isoformat(),
+                'result': result
+            }
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(cache_data, f, ensure_ascii=False, indent=2)
+            logger.debug(f"💾 캐시에 저장: {analysis_type}_{article_id}")
         except Exception as e:
-            logger.error(f"캐시 저장 실패: {str(e)}")
+            logger.warning(f"⚠️ 캐시 저장 실패: {str(e)}")
 
     def _track_api_usage(self):
         """API 사용량 추적"""
-        self.api_calls_count += 1
-        
-        # 일일 사용량 리셋 (매일 자정)
-        now = datetime.datetime.now()
-        if now.date() > self.last_reset_time.date():
-            logger.info(f"일일 API 사용량 리셋: 이전 카운트 {self.api_calls_count}")
-            self.api_calls_count = 1
-            self.last_reset_time = now
-            
-        # 사용량 로깅
-        if self.api_calls_count % 10 == 0:
-            logger.warning(f"주의: OpenAI API 호출 횟수가 {self.api_calls_count}회 도달했습니다")
+        self.api_usage_count += 1
+        if self.api_usage_count >= self.daily_limit:
+            logger.warning(f"⚠️ 일일 API 사용 한도 도달: {self.api_usage_count}/{self.daily_limit}")
+            return False
+        return True
 
     @backoff.on_exception(
         backoff.expo,
@@ -228,41 +253,45 @@ class NewsAnalyzer:
         max_time=30
     )
     def summarize_news(self, article_id: str, title: str, description: str) -> str:
-        """기사 요약 (캐시 사용)"""
+        """뉴스 요약"""
         # 캐시 확인
-        cached_result = self._load_from_cache(article_id, "summary")
+        cached_result = self._load_from_cache(article_id, 'summary')
         if cached_result:
             return cached_result
 
-        # 내용이 너무 짧은 경우 API 호출 방지
-        if len(description) < 50:
-            simple_summary = f"{title}에 대한 간략한 내용."
-            self._save_to_cache(article_id, "summary", simple_summary)
-            return simple_summary
+        if not OPENAI_API_KEY:
+            return description[:200] + "..." if len(description) > 200 else description
 
-        system_msg = "당신은 똑똑한 뉴스 요약가입니다. 한국 정치뉴스를 간결하게 요약해줍니다."
-        user_msg = f"""[뉴스 제목]: {title}\n[내용 요약 대상]: {description}\n\n이 기사를 3줄 이내로 요약해줘."""
+        if not self._track_api_usage():
+            return description[:200] + "..."
 
         try:
-            # API 사용량 추적
-            self._track_api_usage()
-            
-            logger.info(f"OpenAI API 호출: summarize_news - {article_id}")
-            response = openai.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": system_msg},
-                    {"role": "user", "content": user_msg}
-                ],
-                temperature=0.5
+            prompt = f"""
+다음 뉴스 기사를 한국어로 간결하게 요약해주세요. 2-3문장으로 핵심 내용만 정리해주세요.
+
+제목: {title}
+내용: {description}
+
+요약:"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=150,
+                temperature=0.3
             )
-            result = response.choices[0].message.content.strip()
-            # 결과 캐시에 저장
-            self._save_to_cache(article_id, "summary", result)
-            return result
+            
+            summary = response.choices[0].message.content.strip()
+            
+            # 캐시에 저장
+            self._save_to_cache(article_id, 'summary', summary)
+            
+            logger.debug(f"✅ 뉴스 요약 완료: {article_id}")
+            return summary
+            
         except Exception as e:
-            logger.error(f"기사 요약 실패: {str(e)}")
-            return f"{title}의 요약 정보를 가져올 수 없습니다."
+            logger.error(f"❌ 뉴스 요약 실패: {str(e)}")
+            return description[:200] + "..." if len(description) > 200 else description
 
     @backoff.on_exception(
         backoff.expo,
@@ -271,344 +300,324 @@ class NewsAnalyzer:
         max_time=30
     )
     def analyze_sentiment(self, article_id: str, title: str, description: str) -> str:
-        """감성 분석 (캐시 사용)"""
+        """감성 분석"""
         # 캐시 확인
-        cached_result = self._load_from_cache(article_id, "sentiment")
+        cached_result = self._load_from_cache(article_id, 'sentiment')
         if cached_result:
             return cached_result
 
-        # 내용이 너무 짧은 경우 API 호출 방지
-        if len(description) < 50:
-            default_sentiment = "중립"
-            self._save_to_cache(article_id, "sentiment", default_sentiment)
-            return default_sentiment
+        if not OPENAI_API_KEY:
+            return "중립"
 
-        system_msg = "당신은 뉴스 기사의 감성 분석가입니다."
-        user_msg = f"""[뉴스 제목]: {title}\n[뉴스 설명]: {description}\n\n이 뉴스는 긍정적인가요, 부정적인가요, 중립적인가요? 아래 중 하나로만 대답하세요.\n- 긍정\n- 부정\n- 중립"""
+        if not self._track_api_usage():
+            return "중립"
 
         try:
-            # API 사용량 추적
-            self._track_api_usage()
-            
-            logger.info(f"OpenAI API 호출: analyze_sentiment - {article_id}")
-            response = openai.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": system_msg},
-                    {"role": "user", "content": user_msg}
-                ],
-                temperature=0.3
+            prompt = f"""
+다음 뉴스 기사의 감성을 분석해주세요. 정치적 후보자나 정당에 대한 전반적인 톤을 기준으로 판단해주세요.
+
+제목: {title}
+내용: {description}
+
+감성을 다음 중 하나로 분류해주세요:
+- 긍정: 후보자나 정당에 대해 호의적이거나 긍정적인 내용
+- 부정: 후보자나 정당에 대해 비판적이거나 부정적인 내용  
+- 중립: 객관적이거나 중립적인 보도
+
+답변은 "긍정", "부정", "중립" 중 하나만 답해주세요."""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=10,
+                temperature=0.1
             )
-            result = response.choices[0].message.content.strip()
-            result = result.replace('-', '').replace(':', '').strip()
-            # 결과 캐시에 저장
-            self._save_to_cache(article_id, "sentiment", result)
-            return result
+            
+            sentiment = response.choices[0].message.content.strip()
+            
+            # 유효한 감성인지 확인
+            valid_sentiments = ["긍정", "부정", "중립"]
+            if sentiment not in valid_sentiments:
+                sentiment = "중립"
+            
+            # 캐시에 저장
+            self._save_to_cache(article_id, 'sentiment', sentiment)
+            
+            logger.debug(f"✅ 감성 분석 완료: {article_id} -> {sentiment}")
+            return sentiment
+            
         except Exception as e:
-            logger.error(f"감성 분석 실패: {str(e)}")
+            logger.error(f"❌ 감성 분석 실패: {str(e)}")
             return "중립"
 
     def _summarize_news_batch(self, news_batch: List[Dict[str, Any]], batch_num: int, total_batches: int) -> str:
-        """뉴스 배치 요약 (Map 단계)"""
-        # 배치가 비어있으면 처리하지 않음
-        if not news_batch:
-            return "배치에 뉴스가 없습니다."
-            
-        # 캐시 키 생성
-        batch_key = hashlib.md5(
-            json.dumps(
-                [(n['title'], n['url']) for n in news_batch], 
-                sort_keys=True
-            ).encode()
-        ).hexdigest()
-        
-        # 캐시 확인
-        cached_result = self._load_from_cache(batch_key, "batch_summary")
-        if cached_result:
-            return cached_result
-        
-        system_msg = "당신은 대선 뉴스를 분석하는 정치 전략가입니다. 주어진 뉴스들을 상세하게 분석해주세요."
-        
-        news_list_str = "\n\n".join([
-            f"{i+1}. 제목: {news['title']}\n요약: {news['summary']}\n감성: {news['sentiment']}"
-            for i, news in enumerate(news_batch)
-        ])
-
-        user_msg = f"""아래는 전체 {total_batches}개 배치 중 {batch_num}번째 배치의 뉴스입니다:\n\n{news_list_str}\n\n이 뉴스들을 상세하게 분석해주세요. 다음 항목들을 포함해주세요:\n1. 주요 이슈와 키워드\n2. 후보자별 언급 빈도와 이미지\n3. 긍정/부정/중립 기사의 비율\n4. 특이사항이나 주목할 만한 트렌드"""
+        """뉴스 배치 요약"""
+        if not OPENAI_API_KEY:
+            return f"배치 {batch_num}: 총 {len(news_batch)}개의 뉴스가 수집되었습니다."
 
         try:
-            # API 사용량 추적
-            self._track_api_usage()
+            # 뉴스 제목들을 하나의 텍스트로 결합
+            news_titles = []
+            for news in news_batch:
+                title = news.get('title', '')
+                sentiment = news.get('sentiment', '중립')
+                news_titles.append(f"- {title} ({sentiment})")
             
-            logger.info(f"OpenAI API 호출: batch_summary - 배치 {batch_num}/{total_batches}")
-            response = openai.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": system_msg},
-                    {"role": "user", "content": user_msg}
-                ],
+            news_text = "\n".join(news_titles[:10])  # 최대 10개만 사용
+            
+            prompt = f"""
+다음은 대선 관련 뉴스 제목들입니다. 이를 바탕으로 현재 정치 상황과 트렌드를 간결하게 요약해주세요.
+
+뉴스 목록:
+{news_text}
+
+요약 (2-3문장):"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=200,
                 temperature=0.5
             )
-            result = response.choices[0].message.content.strip()
-            # 결과 캐시에 저장
-            self._save_to_cache(batch_key, "batch_summary", result)
-            return result
+            
+            summary = response.choices[0].message.content.strip()
+            logger.info(f"✅ 배치 {batch_num}/{total_batches} 요약 완료")
+            return summary
+            
         except Exception as e:
-            logger.error(f"배치 {batch_num} 요약 실패: {str(e)}")
-            return f"배치 {batch_num} 분석 실패"
+            logger.error(f"❌ 배치 요약 실패: {str(e)}")
+            return f"배치 {batch_num}: 총 {len(news_batch)}개의 뉴스가 분석되었습니다."
 
     def _create_final_summary(self, batch_summaries: List[str], time_range: str) -> str:
-        """최종 요약 생성 (Reduce 단계)"""
-        # 배치 요약이 비어있으면 처리하지 않음
-        if not batch_summaries:
-            return "분석할 데이터가 충분하지 않습니다."
-            
-        # 캐시 키 생성
-        summary_key = hashlib.md5(
-            json.dumps(
-                [s[:100] for s in batch_summaries], 
-                sort_keys=True
-            ).encode()
-        ).hexdigest()
-        
-        # 캐시 확인
-        cached_result = self._load_from_cache(summary_key, "final_summary")
-        if cached_result:
-            return cached_result
-            
-        system_msg = "당신은 대선 뉴스를 종합 분석하는 정치 전략가입니다. 여러 배치의 분석 결과를 종합하여 최종 트렌드를 도출해주세요."
-        
-        summaries_str = "\n\n=== 배치별 분석 ===\n\n" + "\n\n".join([
-            f"[배치 {i+1} 분석]\n{summary}"
-            for i, summary in enumerate(batch_summaries)
-        ])
-
-        user_msg = f"""아래는 {time_range} 동안 수집된 뉴스를 여러 배치로 나누어 분석한 결과입니다:\n\n{summaries_str}\n\n이 분석 결과들을 종합하여 다음 항목들을 포함한 최종 트렌드 분석을 제공해주세요:\n1. 전체적인 여론 동향\n2. 후보자별 이미지와 지지율 변화 추이\n3. 주요 이슈와 키워드의 변화\n4. 향후 전망"""
+        """최종 트렌드 요약 생성"""
+        if not OPENAI_API_KEY or not batch_summaries:
+            return f"{time_range} 기간 동안의 대선 관련 뉴스를 분석했습니다."
 
         try:
-            # API 사용량 추적
-            self._track_api_usage()
+            combined_summaries = "\n\n".join(batch_summaries)
             
-            logger.info(f"OpenAI API 호출: final_summary - {time_range}")
-            response = openai.chat.completions.create(
-                model="gpt-4-turbo",
-                messages=[
-                    {"role": "system", "content": system_msg},
-                    {"role": "user", "content": user_msg}
-                ],
-                temperature=0.5
+            prompt = f"""
+다음은 {time_range} 기간 동안의 대선 관련 뉴스 분석 결과입니다. 
+이를 종합하여 현재 대선 상황의 주요 트렌드와 이슈를 요약해주세요.
+
+분석 결과:
+{combined_summaries}
+
+종합 요약 (3-4문장으로 핵심 트렌드 정리):"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=300,
+                temperature=0.4
             )
-            result = response.choices[0].message.content.strip()
-            # 결과 캐시에 저장 
-            self._save_to_cache(summary_key, "final_summary", result)
-            return result
+            
+            final_summary = response.choices[0].message.content.strip()
+            logger.info("✅ 최종 트렌드 요약 생성 완료")
+            return final_summary
+            
         except Exception as e:
-            logger.error(f"최종 요약 생성 실패: {str(e)}")
-            return "최종 트렌드 분석을 수행할 수 없습니다."
+            logger.error(f"❌ 최종 요약 생성 실패: {str(e)}")
+            return f"{time_range} 기간 동안의 대선 관련 뉴스를 종합 분석했습니다."
 
     def analyze_trends(self, news_data: List[Dict[str, Any]], time_range: str) -> Dict[str, Any]:
-        """트렌드 분석 (Map-Reduce 방식)"""
-        # 뉴스 데이터가 없으면 분석하지 않음
-        if not news_data:
-            logger.warning("분석할 뉴스 데이터가 없습니다.")
-            return {
-                "trend_summary": "현재 분석할 뉴스 데이터가 충분하지 않습니다.",
-                "candidate_stats": {candidate: {"긍정": 0, "부정": 0, "중립": 0} for candidate in self.candidate_list},
-                "total_articles": 0,
-                "time_range": time_range
-            }
+        """뉴스 트렌드 분석"""
+        logger.info(f"📈 트렌드 분석 시작: {len(news_data)}개 기사")
+        
+        # 후보별 통계 계산
+        candidate_stats = {
+            "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+            "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+            "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+        }
+        
+        for article in news_data:
+            title = article.get('title', '')
+            summary = article.get('summary', '')
+            sentiment = article.get('sentiment', '중립')
             
-        # 후보별 감성 통계 계산
-        candidate_stats = defaultdict(lambda: {"긍정": 0, "부정": 0, "중립": 0})
-        for news in news_data:
-            for candidate in self.candidate_list:
-                if candidate in news['title'] or candidate in news['summary']:
-                    sentiment = news['sentiment']
+            # 후보자별 감성 통계
+            for candidate in candidate_stats.keys():
+                if candidate in title or candidate in summary:
                     candidate_stats[candidate][sentiment] += 1
-
-        # 뉴스 데이터를 50개씩 배치로 나누기
-        batch_size = 50
+        
+        # 배치별 요약 생성
+        batch_size = 10
         batches = [news_data[i:i + batch_size] for i in range(0, len(news_data), batch_size)]
-        total_batches = len(batches)
-        
-        # 분석할 데이터가 너무 적으면 배치 처리 생략
-        if len(news_data) < 10:
-            logger.info(f"뉴스 데이터가 너무 적어 간단한 분석만 수행: {len(news_data)}개")
-            return {
-                "trend_summary": "현재 분석할 뉴스 데이터가 충분하지 않습니다. 더 많은 데이터가 수집되면 상세한 분석이 제공됩니다.",
-                "candidate_stats": dict(candidate_stats),
-                "total_articles": len(news_data),
-                "time_range": time_range,
-                "news_list": news_data[:20]  # 최대 20개만 포함
-            }
-        
-        logger.info(f"📊 {total_batches}개 배치로 나누어 분석 시작...")
-        
-        # Map 단계: 각 배치별 요약
         batch_summaries = []
+        
         for i, batch in enumerate(batches, 1):
-            logger.info(f"🔄 배치 {i}/{total_batches} 분석 중...")
-            summary = self._summarize_news_batch(batch, i, total_batches)
+            if len(batch_summaries) >= 5:  # 최대 5개 배치만 처리
+                break
+            summary = self._summarize_news_batch(batch, i, len(batches))
             batch_summaries.append(summary)
         
-        # Reduce 단계: 최종 요약 생성
-        logger.info("🔄 최종 요약 생성 중...")
-        final_summary = self._create_final_summary(batch_summaries, time_range)
+        # 최종 트렌드 요약
+        trend_summary = self._create_final_summary(batch_summaries, time_range)
         
-        # 전역 함수로 뉴스 중요도 순으로 정렬
-        important_news = rank_news_by_importance(news_data, limit=30)
-        
-        return {
-            "trend_summary": final_summary,
-            "candidate_stats": dict(candidate_stats),
+        result = {
+            "trend_summary": trend_summary,
+            "candidate_stats": candidate_stats,
             "total_articles": len(news_data),
             "time_range": time_range,
-            "news_list": important_news  # 중요도순으로 정렬된 뉴스 목록
+            "news_list": news_data
         }
+        
+        logger.info("✅ 트렌드 분석 완료")
+        return result
 
+# === 뉴스 파이프라인 클래스 ===
 class NewsPipeline:
-    """뉴스 파이프라인 관리 클래스"""
+    """뉴스 수집 및 분석 파이프라인"""
+    
     def __init__(self):
         self.collector = NewsCollector()
         self.analyzer = NewsAnalyzer()
-        
-        # 경로 설정 - Render.com 호환성 추가
-        self.assets_path = Path("assets")
-        self.assets_path.mkdir(parents=True, exist_ok=True)
-        
-        # Render.com 영구 저장 디렉토리 설정
-        # Render.com은 /opt/render/project/src/ 경로가 영구적으로 유지됨
-        self.render_persistent_dir = None
-        if os.environ.get('RENDER') == 'true':  # Render.com 환경 감지
-            self.render_persistent_dir = Path("/opt/render/project/src/persistent_data")
-            self.render_persistent_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"📂 Render.com 영구 저장소 경로 설정: {self.render_persistent_dir}")
-            
-            # 이미 저장된 데이터가 있다면 assets로 복사
-            if self.render_persistent_dir.exists():
-                for json_file in self.render_persistent_dir.glob("trend_summary_*.json"):
-                    dest_file = self.assets_path / json_file.name
-                    if not dest_file.exists():
-                        shutil.copy(json_file, dest_file)
-                        logger.info(f"📋 영구 저장소에서 복원된 파일: {json_file.name}")
-        
-        self.temp_storage: List[Dict[str, Any]] = []
-        self.last_trend_summary_time = None
         self.last_run_date = None
-    
+
+    def _should_run_today(self) -> bool:
+        """오늘 실행해야 하는지 확인"""
+        today = datetime.now().date()
+        
+        # 강제 실행 모드 확인
+        if os.environ.get('FORCE_NEWS_COLLECTION') == 'true':
+            logger.info("🔥 강제 실행 모드 - 오늘 실행 여부 무시")
+            return True
+        
+        # 오늘 이미 실행했는지 확인
+        if self.last_run_date == today:
+            logger.info(f"⏭️ 오늘({today})은 이미 실행했습니다.")
+            return False
+        
+        return True
+
     def process_articles(self, articles: List[NewsArticle]) -> List[Dict[str, Any]]:
         """기사 처리 (요약 및 감성 분석)"""
-        processed_news = []
-        for article in articles:
-            summary = self.analyzer.summarize_news(article.unique_id, article.title, article.description)
-            sentiment = self.analyzer.analyze_sentiment(article.unique_id, article.title, article.description)
-            
-            processed_news.append({
-                "title": article.title,
-                "description": article.description,
-                "summary": summary,
-                "sentiment": sentiment,
-                "url": article.url,
-                "published_date": article.published_date,
-                "source": article.source,
-                "query": article.query
-            })
-        return processed_news
-    
+        processed_articles = []
+        
+        logger.info(f"🔄 기사 처리 시작: {len(articles)}개")
+        
+        for i, article in enumerate(articles, 1):
+            try:
+                logger.info(f"📝 기사 처리 중 ({i}/{len(articles)}): {article.title[:50]}...")
+                
+                # 요약 생성
+                summary = self.analyzer.summarize_news(
+                    article.unique_id, 
+                    article.title, 
+                    article.description
+                )
+                
+                # 감성 분석
+                sentiment = self.analyzer.analyze_sentiment(
+                    article.unique_id,
+                    article.title,
+                    article.description
+                )
+                
+                processed_article = {
+                    "title": article.title,
+                    "summary": summary,
+                    "url": article.url,
+                    "published_date": article.published_date,
+                    "source": article.source,
+                    "sentiment": sentiment,
+                    "query": article.query
+                }
+                
+                processed_articles.append(processed_article)
+                
+            except Exception as e:
+                logger.error(f"❌ 기사 처리 실패: {str(e)}")
+                continue
+        
+        logger.info(f"✅ 기사 처리 완료: {len(processed_articles)}개")
+        return processed_articles
+
     def save_trend_summary(self, trend_data: Dict[str, Any]):
         """트렌드 요약 저장"""
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
-        filename = self.assets_path / f"trend_summary_{timestamp}.json"
-        
-        # 로컬 assets 디렉토리에 저장
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(trend_data, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ 트렌드 요약 저장 완료: {filename}")
-        
-        # Render.com 환경이라면 영구 저장소에도 저장
-        if self.render_persistent_dir:
-            persistent_file = self.render_persistent_dir / f"trend_summary_{timestamp}.json"
-            try:
-                with open(persistent_file, "w", encoding="utf-8") as f:
-                    json.dump(trend_data, f, ensure_ascii=False, indent=2)
-                logger.info(f"✅ 영구 저장소에 트렌드 요약 저장 완료: {persistent_file}")
-                
-                # 최신 파일을 가리키는 링크 파일 생성 (latest.json)
-                latest_link = self.render_persistent_dir / "trend_summary_latest.json"
-                with open(latest_link, "w", encoding="utf-8") as f:
-                    json.dump(trend_data, f, ensure_ascii=False, indent=2)
-                logger.info(f"✅ 최신 트렌드 요약 링크 생성 완료: {latest_link}")
-            except Exception as e:
-                logger.error(f"❌ 영구 저장소 저장 실패: {str(e)}")
-    
-    def run_daily_collection(self):
-        """매일 실행되는 뉴스 수집 (오전 6시)"""
-        # 오늘 이미 실행되었는지 확인
-        today = datetime.datetime.now().date()
-        if self.last_run_date == today:
-            logger.info(f"⏭️ 오늘({today})은 이미 뉴스 수집을 실행했습니다. 건너뜁니다.")
-            return
-            
-        logger.info("⏳ 뉴스 수집 시작...")
-        
         try:
-            # 뉴스 수집
-            logger.info("📰 뉴스 기사 수집을 시작합니다...")
-            articles = self.collector.collect_all_news()
-            logger.info(f"📰 {len(articles)}개의 뉴스 기사 수집 완료")
+            # 타임스탬프 파일명 생성
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+            filename = f"trend_summary_{timestamp}.json"
+            filepath = ASSETS_DIR / filename
             
+            # 파일 저장
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(trend_data, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"💾 트렌드 요약 저장 완료: {filename}")
+            
+            # 영구 저장소에도 복사 (Render.com 환경)
+            if os.environ.get('RENDER') == 'true':
+                persistent_dir = Path("/opt/render/project/src/persistent_data")
+                if persistent_dir.exists():
+                    import shutil
+                    # 최신 파일로 복사
+                    latest_file = persistent_dir / "trend_summary_latest.json"
+                    shutil.copy(filepath, latest_file)
+                    
+                    # 원본 파일도 복사
+                    perm_file = persistent_dir / filename
+                    shutil.copy(filepath, perm_file)
+                    
+                    logger.info(f"📋 영구 저장소에 복사 완료: {filename}")
+            
+        except Exception as e:
+            logger.error(f"❌ 트렌드 요약 저장 실패: {str(e)}")
+
+    def run_daily_collection(self):
+        """일일 뉴스 수집 및 분석 실행"""
+        try:
+            start_time = datetime.now()
+            logger.info(f"🚀 일일 뉴스 수집 시작: {start_time}")
+            
+            # 실행 여부 확인
+            if not self._should_run_today():
+                return
+            
+            # 1. 뉴스 수집
+            articles = self.collector.collect_all_news()
             if not articles:
-                logger.warning("⚠️ 수집된 뉴스 기사가 없습니다. 기본 데이터를 사용합니다.")
-                # 기본 데이터 생성
-                current_time = datetime.datetime.now()
-                time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트"
-                trend_data = {
-                    "trend_summary": "현재 뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요.",
+                logger.warning("⚠️ 수집된 뉴스가 없습니다.")
+                # 빈 데이터라도 오늘 날짜로 저장
+                empty_data = {
+                    "trend_summary": "오늘 수집된 뉴스가 없습니다.",
                     "candidate_stats": {
                         "이재명": {"긍정": 0, "부정": 0, "중립": 0},
                         "김문수": {"긍정": 0, "부정": 0, "중립": 0},
                         "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                     },
                     "total_articles": 0,
-                    "time_range": time_range,
+                    "time_range": f"{start_time.strftime('%Y-%m-%d')} 수집",
                     "news_list": []
                 }
-                self.save_trend_summary(trend_data)
-                self.last_run_date = today
+                self.save_trend_summary(empty_data)
+                self.last_run_date = start_time.date()
                 return
             
-            # 기사 처리
-            logger.info("🔄 뉴스 기사 분석을 시작합니다...")
-            processed_news = self.process_articles(articles)
-            logger.info(f"✅ {len(processed_news)}개 기사 분석 완료")
+            # 2. 기사 처리 (요약 및 감성 분석)
+            processed_articles = self.process_articles(articles)
             
-            self.temp_storage.extend(processed_news)
+            # 3. 트렌드 분석
+            time_range = f"{start_time.strftime('%Y-%m-%d')} 수집"
+            trend_data = self.analyzer.analyze_trends(processed_articles, time_range)
             
-            # 트렌드 분석
-            logger.info("📊 트렌드 분석을 시작합니다...")
-            current_time = datetime.datetime.now()
-            time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트"
-            trend_data = self.analyzer.analyze_trends(self.temp_storage, time_range)
-            logger.info("✅ 트렌드 분석 완료")
-            
-            # 트렌드 요약 저장
-            logger.info("💾 트렌드 요약을 저장합니다...")
+            # 4. 결과 저장
             self.save_trend_summary(trend_data)
             
-            # 임시 저장소 초기화 및 시간 업데이트
-            self.temp_storage = []
-            self.last_trend_summary_time = current_time
-            self.last_run_date = today
+            # 5. 실행 상태 업데이트
+            self.last_run_date = start_time.date()
             
-            logger.info(f"✅ 오늘의 뉴스 수집 및 분석 완료: {today}")
+            end_time = datetime.now()
+            duration = end_time - start_time
+            logger.info(f"✅ 일일 뉴스 수집 완료: {duration.total_seconds():.1f}초 소요")
             
         except Exception as e:
-            logger.error(f"❌ 뉴스 수집 중 오류 발생: {str(e)}")
-            # 오류 발생 시에도 기본 데이터 저장
+            logger.error(f"❌ 일일 뉴스 수집 실패: {str(e)}")
+            # 오류 발생 시에도 오늘 날짜로 기본 데이터 저장
             try:
-                current_time = datetime.datetime.now()
-                time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트 (오류 발생)"
-                trend_data = {
+                error_data = {
                     "trend_summary": f"뉴스 수집 중 오류가 발생했습니다: {str(e)}",
                     "candidate_stats": {
                         "이재명": {"긍정": 0, "부정": 0, "중립": 0},
@@ -616,24 +625,23 @@ class NewsPipeline:
                         "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                     },
                     "total_articles": 0,
-                    "time_range": time_range,
+                    "time_range": f"{datetime.now().strftime('%Y-%m-%d')} 오류",
                     "news_list": []
                 }
-                self.save_trend_summary(trend_data)
-                self.last_run_date = today
-                logger.info("💾 오류 상황에서 기본 데이터를 저장했습니다.")
+                self.save_trend_summary(error_data)
+                self.last_run_date = datetime.now().date()
             except Exception as e2:
-                logger.error(f"❌ 기본 데이터 저장도 실패: {str(e2)}")
+                logger.error(f"❌ 오류 데이터 저장도 실패: {str(e2)}")
 
-# 전역 파이프라인 인스턴스 생성
+# === 전역 인스턴스 ===
 pipeline = NewsPipeline()
 
+# === 메인 실행 함수 ===
 def run_news_pipeline():
-    """스케줄러에서 호출될 함수"""
+    """뉴스 파이프라인 실행 (외부 호출용)"""
     pipeline.run_daily_collection()
 
-# 직접 실행 시 (api_server.py에서 스케줄러 설정함)
+# === 메인 실행 ===
 if __name__ == "__main__":
-    logger.info("🛑 주의: 이 스크립트는 직접 실행하지 말고 api_server.py를 통해 실행하세요.")
-    logger.info("🕒 테스트 목적으로 한 번의 뉴스 수집을 실행합니다.")
+    logger.info("🎯 뉴스 스크래퍼 직접 실행")
     run_news_pipeline()
