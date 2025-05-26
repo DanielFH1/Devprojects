@@ -49,8 +49,8 @@
 - **FastAPI**: 고성능 웹 API 프레임워크
 - **Python**: 메인 개발 언어
 - **OpenAI API**: 뉴스 감성 분석
-- **NewsAPI**: 뉴스 데이터 수집
 - **APScheduler**: 자동화된 작업 스케줄링
+- **Gnews**: 뉴스 크롤링용 라이브러리
 
 ### 프론트엔드
 

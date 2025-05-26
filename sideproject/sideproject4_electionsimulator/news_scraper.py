@@ -38,8 +38,19 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 if not OPENAI_API_KEY:
     logger.error("❌ OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
+    logger.error("   뉴스 분석 기능이 제한됩니다.")
 else:
-    openai.api_key = OPENAI_API_KEY
+    logger.info("✅ OpenAI API 키 확인됨")
+
+# OpenAI 클라이언트 초기화
+openai_client = None
+if OPENAI_API_KEY:
+    try:
+        openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        logger.info("✅ OpenAI 클라이언트 초기화 완료")
+    except Exception as e:
+        logger.error(f"❌ OpenAI 클라이언트 초기화 실패: {e}")
+        openai_client = None
 
 # 검색 키워드 설정
 SEARCH_QUERIES = [
@@ -256,7 +267,7 @@ class NewsAnalyzer:
         if cached_result:
             return cached_result
 
-        if not OPENAI_API_KEY:
+        if not openai_client:
             return description[:200] + "..." if len(description) > 200 else description
 
         if not self._track_api_usage():
@@ -271,7 +282,7 @@ class NewsAnalyzer:
 
 요약:"""
 
-            response = openai.ChatCompletion.create(
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=150,
@@ -303,7 +314,7 @@ class NewsAnalyzer:
         if cached_result:
             return cached_result
 
-        if not OPENAI_API_KEY:
+        if not openai_client:
             return "중립"
 
         if not self._track_api_usage():
@@ -323,7 +334,7 @@ class NewsAnalyzer:
 
 답변은 "긍정", "부정", "중립" 중 하나만 답해주세요."""
 
-            response = openai.ChatCompletion.create(
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=10,
@@ -349,7 +360,7 @@ class NewsAnalyzer:
 
     def _summarize_news_batch(self, news_batch: List[Dict[str, Any]], batch_num: int, total_batches: int) -> str:
         """뉴스 배치 요약"""
-        if not OPENAI_API_KEY:
+        if not openai_client:
             return f"배치 {batch_num}: 총 {len(news_batch)}개의 뉴스가 수집되었습니다."
 
         try:
@@ -370,7 +381,7 @@ class NewsAnalyzer:
 
 요약 (2-3문장):"""
 
-            response = openai.ChatCompletion.create(
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200,
@@ -387,7 +398,7 @@ class NewsAnalyzer:
 
     def _create_final_summary(self, batch_summaries: List[str], time_range: str) -> str:
         """최종 트렌드 요약 생성"""
-        if not OPENAI_API_KEY or not batch_summaries:
+        if not openai_client or not batch_summaries:
             return f"{time_range} 기간 동안의 대선 관련 뉴스를 분석했습니다."
 
         try:
@@ -402,7 +413,7 @@ class NewsAnalyzer:
 
 종합 요약 (3-4문장으로 핵심 트렌드 정리):"""
 
-            response = openai.ChatCompletion.create(
+            response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=300,
