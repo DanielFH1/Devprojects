@@ -150,34 +150,48 @@ news_cache = NewsCache()
 def update_news_cache():
     """assets 폴더에서 최신 뉴스 데이터를 읽어와 캐시를 업데이트"""
     try:
-        # 최신 뉴스 데이터 파일 찾기 - 파일명 및 수정 시간 기준으로 정렬
+        # 최신 뉴스 데이터 파일 찾기 - 기본 파일 제외하고 날짜 파일 우선
         latest_file = None
         
-        # 먼저 assets 디렉토리에서 최신 파일 찾기
-        news_files = sorted(
-            ASSETS_DIR.glob("trend_summary_*.json"),
-            key=lambda p: (p.name, p.stat().st_mtime),  # 파일명도 정렬 기준에 추가
-            reverse=True
-        )
+        # 먼저 assets 디렉토리에서 날짜가 포함된 파일들만 찾기 (기본 파일 제외)
+        news_files = [
+            f for f in ASSETS_DIR.glob("trend_summary_*.json")
+            if f.name != "trend_summary_default.json"  # 기본 파일 제외
+        ]
         
-        # 파일명 기준으로 정렬하여 가장 최신 날짜의 파일을 사용
         if news_files:
-            # trend_summary_YYYY-MM-DD 형식의 파일명에서 날짜 추출하여 정렬
             try:
-                # 날짜 기준으로 정렬 (파일명의 날짜 부분 추출)
+                # 파일명에서 날짜와 시간 추출하여 정렬
+                def extract_datetime_from_filename(filepath):
+                    """파일명에서 날짜시간 추출"""
+                    try:
+                        # trend_summary_2025-05-26_13-03.json 형식에서 날짜시간 추출
+                        parts = filepath.stem.split('_')
+                        if len(parts) >= 3:
+                            date_str = parts[2]  # 2025-05-26
+                            time_str = parts[3] if len(parts) > 3 else "00-00"  # 13-03
+                            datetime_str = f"{date_str} {time_str.replace('-', ':')}"
+                            return datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+                    except:
+                        pass
+                    # 파싱 실패 시 파일 수정 시간 사용
+                    return datetime.fromtimestamp(filepath.stat().st_mtime)
+                
+                # 날짜시간 기준으로 정렬하여 가장 최신 파일 선택
                 latest_file = sorted(
                     news_files,
-                    key=lambda p: p.name.split("_")[1:3], # 날짜와 시간 부분 추출
+                    key=extract_datetime_from_filename,
                     reverse=True
                 )[0]
-                logger.info(f"📂 assets 폴더에서 최신 파일 발견 (날짜 기준): {latest_file}")
+                logger.info(f"📂 assets 폴더에서 최신 날짜 파일 발견: {latest_file}")
+                
             except Exception as e:
                 # 정렬 실패 시 수정 시간 기준으로 폴백
-                latest_file = news_files[0]
+                latest_file = sorted(news_files, key=lambda p: p.stat().st_mtime, reverse=True)[0]
                 logger.warning(f"⚠️ 날짜 기준 정렬 실패, 수정 시간 기준 사용: {str(e)}")
                 logger.info(f"📂 assets 폴더에서 최신 파일 발견 (수정 시간 기준): {latest_file}")
         
-        # assets에 파일이 없으면 영구 저장소 검사
+        # 날짜 파일이 없으면 영구 저장소 검사
         if not latest_file and PERSISTENT_DIR and PERSISTENT_DIR.exists():
             latest_link = PERSISTENT_DIR / "trend_summary_latest.json"
             if latest_link.exists():
@@ -190,10 +204,10 @@ def update_news_cache():
                 logger.info(f"📋 영구 저장소의 파일을 assets에 복사: {dest_file.name}")
                 latest_file = dest_file
         
-        # 어디에도 파일이 없으면 기본 파일 사용
+        # 어디에도 날짜 파일이 없으면 기본 파일 사용
         if not latest_file and DEFAULT_DATA_FILE.exists():
             latest_file = DEFAULT_DATA_FILE
-            logger.warning("뉴스 데이터 파일을 찾을 수 없어 기본 데이터를 사용합니다.")
+            logger.warning("⚠️ 날짜가 포함된 뉴스 데이터 파일을 찾을 수 없어 기본 데이터를 사용합니다.")
             
         # 파일을 찾았으면 처리
         if latest_file:
@@ -642,14 +656,47 @@ async def force_refresh(background_tasks: BackgroundTasks):
         "estimated_completion": (datetime.now() + timedelta(minutes=3)).isoformat()
     }
 
+@app.post("/update-cache")
+async def force_update_cache():
+    """캐시를 강제로 업데이트하는 엔드포인트"""
+    try:
+        logger.info("🔄 캐시 강제 업데이트 요청을 받았습니다.")
+        
+        # 캐시 업데이트 실행
+        update_news_cache()
+        
+        # 업데이트 후 상태 확인
+        if news_cache.latest_data:
+            return {
+                "message": "캐시가 성공적으로 업데이트되었습니다.",
+                "status": "success",
+                "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else None,
+                "news_count": len(news_cache.latest_data.get("news_list", [])),
+                "time_range": news_cache.latest_data.get("time_range", "알 수 없음")
+            }
+        else:
+            return {
+                "message": "캐시 업데이트는 완료되었지만 데이터가 없습니다.",
+                "status": "no_data",
+                "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else None
+            }
+    except Exception as e:
+        logger.error(f"❌ 캐시 강제 업데이트 실패: {str(e)}")
+        return {
+            "message": f"캐시 업데이트 중 오류가 발생했습니다: {str(e)}",
+            "status": "error"
+        }
+
 # --- 서버 시작 이벤트 ---
 @app.on_event("startup")
 async def startup_event():
     # 초기 뉴스 데이터 로드
     try:
-        logger.info("🔄 초기 데이터 로드 시작...")
-        update_news_cache()  # 캐시 업데이트만 수행
-        logger.info("✅ 초기 데이터 로드 완료")
+        logger.info("�� 초기 데이터 로드 시작...")
+        
+        # 먼저 캐시 강제 업데이트
+        update_news_cache()
+        logger.info("✅ 초기 캐시 업데이트 완료")
         
         # 스케줄러 설정 - 명확하게 하나의 작업만 지정
         schedule.clear()  # 기존 스케줄 초기화
@@ -665,9 +712,9 @@ async def startup_event():
             # 백그라운드 스레드에서 스케줄러 실행
             scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
             scheduler_thread.start()
-            logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다. 매일 오전 6시에 데이터가 갱신됩니다.")
+            logger.info("🕒 백그라운드 스케줄러 시작됨")
         
-        # 오늘 날짜의 파일이 이미 있는지 확인
+        # 오늘 날짜의 파일이 있는지 확인
         today = datetime.now().strftime("%Y-%m-%d")
         today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
         
@@ -715,16 +762,11 @@ async def startup_event():
         delayed_thread.start()
         logger.info("⏰ 5분 후 추가 데이터 수집 체크가 예약되었습니다.")
         
+        logger.info("✅ 서버 시작 이벤트 완료")
+        
     except Exception as e:
-        logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
-        # 실패해도 강제 수집 시도
-        try:
-            import threading
-            force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
-            force_fetch_thread.start()
-            logger.info("🔄 오류 발생으로 인한 백그라운드 강제 뉴스 수집을 시작합니다.")
-        except Exception as e2:
-            logger.error(f"❌ 강제 수집도 실패: {str(e2)}")
+        logger.error(f"❌ 서버 시작 이벤트 실패: {str(e)}")
+        # 실패해도 서버는 계속 실행되도록 함
 
 # --- Flutter 웹 앱 제공 ---
 if not FLUTTER_BUILD_DIR.exists() or not (FLUTTER_BUILD_DIR / "index.html").exists():

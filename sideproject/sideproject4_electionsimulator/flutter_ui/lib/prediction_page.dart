@@ -85,22 +85,41 @@ class _PredictionPageState extends State<PredictionPage>
 
   Future<void> _refreshData() async {
     try {
-      final uri = Uri.base.resolve('/refresh');
-      final response = await http.post(uri);
+      // 먼저 캐시 업데이트 시도
+      final cacheUri = Uri.base.resolve('/update-cache');
+      final cacheResponse = await http.post(cacheUri);
 
-      if (response.statusCode == 200) {
+      if (cacheResponse.statusCode == 200) {
+        final cacheData = json.decode(cacheResponse.body);
+        print("✅ 캐시 업데이트 완료: ${cacheData['message']}");
+
+        // 캐시 업데이트 후 데이터 다시 불러오기
+        await fetchPredictionData();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('데이터 새로고침이 시작되었습니다. 잠시만 기다려주세요.')),
+            SnackBar(content: Text('캐시가 업데이트되었습니다: ${cacheData['message']}')),
           );
         }
-        await Future.delayed(const Duration(seconds: 5));
-        await fetchPredictionData();
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('새로고침 요청이 실패했습니다.')));
+        // 캐시 업데이트 실패 시 기존 새로고침 로직 사용
+        final uri = Uri.base.resolve('/refresh');
+        final response = await http.post(uri);
+
+        if (response.statusCode == 200) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('데이터 새로고침이 시작되었습니다. 잠시만 기다려주세요.')),
+            );
+          }
+          await Future.delayed(const Duration(seconds: 5));
+          await fetchPredictionData();
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('새로고침 요청이 실패했습니다.')));
+          }
         }
       }
     } catch (e) {
