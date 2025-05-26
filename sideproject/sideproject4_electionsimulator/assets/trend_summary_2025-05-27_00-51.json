@@ -1,0 +1,762 @@
+{
+  "trend_summary": "2025-05-27 수집 기간 동안의 대선 관련 뉴스를 분석했습니다.",
+  "candidate_stats": {
+    "이재명": {
+      "긍정": 0,
+      "부정": 0,
+      "중립": 22
+    },
+    "김문수": {
+      "긍정": 0,
+      "부정": 0,
+      "중립": 30
+    },
+    "이준석": {
+      "긍정": 0,
+      "부정": 0,
+      "중립": 20
+    }
+  },
+  "total_articles": 82,
+  "time_range": "2025-05-27 수집",
+  "news_list": [
+    {
+      "title": "이재명-김문수 격차 9.3%p…보수 결집, 중도·무당층 일부 이탈 - 한겨레",
+      "summary": "이재명-김문수 격차 9.3%p…보수 결집, 중도·무당층 일부 이탈  한겨레",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE81UXVnc0IzUWdHR3ljQ3JDRFN5YTFoaVRTUmdJcHdueTJJbll4UUJnV1MwMzZCb05QOXhtZHkwa1ItMXZFdi1lR3NpLUJtUmVQN2pfWDV3bHlpMTZHQTk5Rm9BN054dVhlSHc?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:14:00 GMT",
+      "source": "한겨레",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "‘대선 풍향계’ 충북, 이재명 45%·김문수 38%·이준석 8% [충북 여론조사] - KBS 뉴스",
+      "summary": "‘대선 풍향계’ 충북, 이재명 45%·김문수 38%·이준석 8% [충북 여론조사]  KBS 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBwQWhXVU9XY2loWFZJRjYwZ3FPNGpxM216LTJySDN5RFRIR1JVSTVDLXk1OWRHLWVGNEpRX3JadFlKcUxLZXdtaVIyaXNtTmFhbVpWZzQzVmpCYW8?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:11:00 GMT",
+      "source": "KBS 뉴스",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명·김문수 격차, 일주일새 14%P→9%P … 충청선 접전 - 매일경제",
+      "summary": "이재명·김문수 격차, 일주일새 14%P→9%P … 충청선 접전  매일경제",
+      "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE94dTJNX3hZSm9DRVVqYmluZGNwcFo1WjFJRmNFMDNxUmh6eHhZN2NtVFVmRUJMMENpRjRSaXhJZWUxekNOUlBlbTdoUUtSYjBQYTJCMXR3?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:41:33 GMT",
+      "source": "매일경제",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "[6·3 대선] 이재명·김문수 '경기대첩' - 인천일보",
+      "summary": "[6·3 대선] 이재명·김문수 '경기대첩'  인천일보",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTFAxcmxTSnZfM0lNY0xQUzh5d0cwYV9BZEF3MWlwQXI0b2tqZVZ5T29kc1ROVnRXWEVULW5ZYzJkbTRWQjdxTFJlMGxJMnFEYTNVNGFXUWd3SWVtSU5ycXFKZDdlVHRFUWtrS0xjSmprRHQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:57:00 GMT",
+      "source": "인천일보",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명 44.9%·김문수 35.9%·이준석 9.6%[넥스트리서치] - 조선일보",
+      "summary": "이재명 44.9%·김문수 35.9%·이준석 9.6%[넥스트리서치]  조선일보",
+      "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxPQWUtSnlaUUdKU1NHcGRFaUlYTkpYRjJNLUJ1UFdiQnZTSnB4bUZEVFVZNS1OM1plRkY2Y2pMQWwtZEQtcjdkdjdwcXdVeS1pcnM5OHR3RHRFb1NKX0pXbVNTR1F2T2szSnRGa2dIY09EMGM3WUx6NEMtWFVDcTdCOGV5a3pDM0t3VHF30gGfAUFVX3lxTE1QVVR6dF9TWkdJdEYzZmRDRGl6VzhULWV2OGhyd0hHekQ5cW1oQU1NODZmZ1ZGX1pHZTAyZGNtbG5sdDNjeE42RG9SbG5KUXpnQ25DTXVFSG9CdXd1RFc3N3dyRHo1V3B4OUtFYlZ1c0lDM04zR0lQaVZuWTRzR0tQMnBiWG1BOUFhNTNwRzAzeVlkUUlMZW41c3dYbDNVbw?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:59:03 GMT",
+      "source": "조선일보",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "[대선 여론조사] 이재명 46.5%, 김문수 40.4%, 이준석 10.3% - 제주일보",
+      "summary": "[대선 여론조사] 이재명 46.5%, 김문수 40.4%, 이준석 10.3%  제주일보",
+      "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBPNFJMVG9HQlBVTlZMemVsMkVpZWJTT0xDOEtBVkRpR3p5NndRdTVWMVJtZnlxOV9iamM3TjB1UTRWUEZZcklXWHg5V1pRWGJWMlNhNExJc25lNUNBZUE4WWo4OWYxek9SNEtPbQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:02:00 GMT",
+      "source": "제주일보",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명 \"대선 결과로 '尹 상왕 복귀'할지, '새나라 출발'할지 결정\" - 매일일보",
+      "summary": "이재명 \"대선 결과로 '尹 상왕 복귀'할지, '새나라 출발'할지 결정\"  매일일보",
+      "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE81M2l6OWdYQ0dlUVQtdmxFLWY2ay1YdWNPYXpYeWwwaVVFYzgyZDlYdFE3Z2t2bkMzNFRrRHRNb2tGaUxaNDkxaVgwcHEyWkQyMlVydm1qMTFDZTRiRWlpeEk5TVY?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:37:15 GMT",
+      "source": "매일일보",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "[오! 대선] 김문수 세워두고 '7분' 연설? / 이재명 '과거로 돌아간다면..' - JTBC",
+      "summary": "[오! 대선] 김문수 세워두고 '7분' 연설? / 이재명 '과거로 돌아간다면..'  JTBC",
+      "url": "https://news.google.com/rss/articles/CBMiVEFVX3lxTFAyRFBHMzQ3ajFsMjEzcTNBX2h5Y3Nmek8yTjYwcldKNThhSzlfb1hCaGFqTHhHTUwyWjdta2M1clhOMGd3blpJQlpqSTRkNFk2Y1Z2Tg?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:11:00 GMT",
+      "source": "JTBC",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "대선 후보, 무책임한 공약들...“재원 조달 로드맵은 집권 이후에” - ESG경제",
+      "summary": "대선 후보, 무책임한 공약들...“재원 조달 로드맵은 집권 이후에”  ESG경제",
+      "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE82LVpveWo0WXlsZ25qYWdXWGRPTEJPdGVvcEpvcFA0d2hyeW5WMEJ6MzBJUUdUMGhJYWFPR2lmT25fNi12TVF4T01aSExQUEpVd1hhclZqbzJfRjFwbEJjRWFCYkhOQzlraHpneg?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 14:30:43 GMT",
+      "source": "ESG경제",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명 대선 후보, '경제성장! 내란종식!' 사전투표 독려 - 네이트 뉴스",
+      "summary": "이재명 대선 후보, '경제성장! 내란종식!' 사전투표 독려  네이트 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiU0FVX3lxTFBNd2ZRMnlDTXVoVG9JLWRZRXpyTnFlZ2FrYlJkMmpfYWk5MUhVazdiUHp2LUpLbVA1RDQyMDg1bmxvNjJGRjdDN3dUZl94WUVaeTJV?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:02:00 GMT",
+      "source": "네이트 뉴스",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명 \"성장 위한 재정 지출은 기본상식\"…경기 표밭갈이(종합2보) - 연합뉴스",
+      "summary": "이재명 \"성장 위한 재정 지출은 기본상식\"…경기 표밭갈이(종합2보)  연합뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBZTndqYVdiNTVwZVp0TU9ubE1VaXNNbFBQNm54cDRtNXllSk1vNG9Calh4R3czZ0JzSUc1X25VVXlDNFpiTTFBV0w1eklMMDRGd3lOV2MyVW5acTTSAWBBVV95cUxQN3d2VFlwczd2Q2pTUFp0RkhJSWlnN1BENFJNbWRGcXgtMDNaNEJKUjZ5NkFoekc2TFVwbFU5WEhWd19JeHM2SEU0czdmb0ZVQzRtWHJUR3d5NXhTbEFzUVI?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:48:56 GMT",
+      "source": "연합뉴스",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "'경기지사 시절 치적' 내세우며 '기본소득' 언급 줄이는 이재명 - 중부일보",
+      "summary": "'경기지사 시절 치적' 내세우며 '기본소득' 언급 줄이는 이재명  중부일보",
+      "url": "https://news.google.com/rss/articles/CBMib0FVX3lxTFA2d3ZGbmZGWmU1SGFtY3NJME1Lb1Z5U1phYmtsRUlVNURXYXpNYVRMUDBYbkNQRnZYdnZabFk3czVYd01HeFFxNlFFTWtpSElZYkU1SEp2WlUxRlR0d0d5RlRsNE5fdVJOMlhWNUxLTQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:02:45 GMT",
+      "source": "중부일보",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "[영상] 권성동 “대학 다닐 때 제가 이재명 교육 잘못 시켜” - 미디어오늘",
+      "summary": "[영상] 권성동 “대학 다닐 때 제가 이재명 교육 잘못 시켜”  미디어오늘",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE05Ym1USUJ3ZURXZjRGRGRyaEdySlVqQTdJOGV4eFVyQlo3clFBOU5LeGRYcFJGQ2VOUzJDdW1MZzZEYWpWLTFKY2QydnFoNVJqY2JodHE3Z2RSMkxLelh5SnFJbXVhQWlCWVJhWFBsak8?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 12:39:00 GMT",
+      "source": "미디어오늘",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "[시리즈 보도자료] 후보별 10대 공약 비교평가(3) 외교·안보 편 - 경제정의실천시민연합",
+      "summary": "[시리즈 보도자료] 후보별 10대 공약 비교평가(3) 외교·안보 편  경제정의실천시민연합",
+      "url": "https://news.google.com/rss/articles/CBMiR0FVX3lxTE1ETEpVZGZMXzE4RVdjOS1KMzBNSlNVVHpIR2JJZTMxeV9iQnNWcFpwZTltaDBxLVg3VVJmSVh5MHV6ZVM1QTVB?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:14:32 GMT",
+      "source": "경제정의실천시민연합",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "대선 지지율 바로미터 서울서 이재명·김문수 격차 3.2%p…오차범위 내 - 매일신문",
+      "summary": "대선 지지율 바로미터 서울서 이재명·김문수 격차 3.2%p…오차범위 내  매일신문",
+      "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTE0yWkhQY1JuNE5lSW4wZWIwRlpyNVhndFRGdEFkcDBiV3lUSm5hRzREamZQV182MG9RMFBjOEdJSEVOZ0F0ZlUwclZiem5obzRwSXJUZ0dTN1lkU2FNc1RsQllR?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:55:53 GMT",
+      "source": "매일신문",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "대선 쟁점된 ‘거북섬’ 공방 진실은?…이재명 ‘치적’ 홍보하다 공격 빌미 - 한겨레",
+      "summary": "대선 쟁점된 ‘거북섬’ 공방 진실은?…이재명 ‘치적’ 홍보하다 공격 빌미  한겨레",
+      "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1meGczRHpweThZUGtLOWFvOUM2RDVUZjc0cUkzQjJLRnNjeGFfdnFWN1lPemlsUTQzenhQYmNFQ05aS3ltLVo0VUlNcXo0dnZXNnI4MmQzd0NLNXptaWxGdHB5dw?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 13:14:00 GMT",
+      "source": "한겨레",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명 44.9% 김문수 35.9% 이준석 9.6%···중도층 이탈에 李 ‘주춤’ [매경·MBN 대선 여론조사] - 매일경제",
+      "summary": "이재명 44.9% 김문수 35.9% 이준석 9.6%···중도층 이탈에 李 ‘주춤’ [매경·MBN 대선 여론조사]  매일경제",
+      "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE41eHpFdVZIQVNLTk5oMldiR016RGNleFVoeENYQklWU3FmS1EzOUxDWjVYVUJqRnZSd3piWEctUHBaTG0xa3NJUFRvUnBiQWtCNUpEZG9B?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 06:00:00 GMT",
+      "source": "매일경제",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "대선 일주일 앞둔 이재명, '내란심판 선거' 강조·'민생경제 회복' 약속(종합) - 네이트 뉴스",
+      "summary": "대선 일주일 앞둔 이재명, '내란심판 선거' 강조·'민생경제 회복' 약속(종합)  네이트 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiU0FVX3lxTFA3VkhvVC05YXlNSHg2YmV2S2Y4dXBPLTN2bTAtMm4yMnprQVNkNXBZeEVHNGJST3htQWtIell0ZVVEQ2pIT2V1YkRwZlp2eWczMmV3?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:56:00 GMT",
+      "source": "네이트 뉴스",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "이재명, 줄어드는 지지율 격차에…“내란세력 돌아올 준비” 지지 호소 - 한겨레",
+      "summary": "이재명, 줄어드는 지지율 격차에…“내란세력 돌아올 준비” 지지 호소  한겨레",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5FVmFfT0REcDl5Y3FqWWo3ZjVyZTVGVlNudlB1dmM5emJrNWc2NTVydExfVXlnLUhyd1RxSHRyS2VJeVlCU2pQNzZsdHJiXzdVX29ISGxsczFmTy1OQ2I5NnRPRHhTX0NfcXc?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:14:00 GMT",
+      "source": "한겨레",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "[6·3 대선] 이재명 \"국방장관에 민간인... 사법개혁보다 민생 급선무\" - 매일일보",
+      "summary": "[6·3 대선] 이재명 \"국방장관에 민간인... 사법개혁보다 민생 급선무\"  매일일보",
+      "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTE1obzNfWlJvN0FVYVFjUm02R3d1V1JidFVTb2RMYWM0TFJ1TUxMbHpXd1FNeHNZODZkb1dHaHd4RnpsZVQ2ejdHYjZTYWJrZ0RhWFQ0SHVqd2ZrM3VuVWJWWXY5b0U?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 06:54:11 GMT",
+      "source": "매일일보",
+      "sentiment": "중립",
+      "query": "이재명 대선"
+    },
+    {
+      "title": "김문수 대선공약 '품절약위원회·혁신신약 약가보상' - 데일리팜",
+      "summary": "김문수 대선공약 '품절약위원회·혁신신약 약가보상'  데일리팜",
+      "url": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE0xMnlQSGZkRm9adno2RFJ4Sm5LOTRFT2JLWTUwblZpWFI2SktEMWlmTFBhMVFreFEyM3F3b3J0bUhnRUlpcktoUW1KWWVOSGt5MFZZcjc0dTRiZHBG?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 14:28:46 GMT",
+      "source": "데일리팜",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "[정우상 칼럼] ‘진짜 김문수’라면 알고 있을 마지막 퍼즐 해법 - 조선일보",
+      "summary": "[정우상 칼럼] ‘진짜 김문수’라면 알고 있을 마지막 퍼즐 해법  조선일보",
+      "url": "https://news.google.com/rss/articles/CBMiggFBVV95cUxQaFBwc1hqN052NHZUbXNZc1BDMGp5X2xYbDA2aW9XTDZVNm9zekJCclFlVVdfVm5teWhQZjlmSGdnN3BIM3hSaExlMUpDcHZyWE52MHMzTDExSTl5bUZfNWhqYWltX25XUEt0YWhEcU5DNnhmTzVYQVFmSkZSS2VTQXlB0gGWAUFVX3lxTE9mUDhGdWdwVG1uZDA2VGlkSkg4ZzBJZmh2SnpXM2VwWEdvVFZxNTlZeUFKVFhpNG1oRWhKaUlvNFh5cnZBUTJpX3RRcWJQUjZRdXBFT3dEbERxM0hqb3pGTTR6elJIZVhlWkxnbDBFdDRqOVU5MG1icTZ3Q3NYT1pDYVQ1UkhwUUlqQ3Y0RHVZU1A2LWJsUQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 15:02:00 GMT",
+      "source": "조선일보",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "마패 목에 건 김문수 대선 후보 - 국제뉴스",
+      "summary": "마패 목에 건 김문수 대선 후보  국제뉴스",
+      "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTE0tT1B6Y0FmTnE0WU1XVkQxZzVzUmw4aEpFVklCVWdlelVxRGctdlBZVVRwYkR2LXFLN2wyZGpjbTNVVkRndXdoWUZnLWdWaWhlX3c0QWtwaWRrX1Y2a3I4MmFsWnFwSHV6SjU1NHJR?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 13:43:56 GMT",
+      "source": "국제뉴스",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "김문수·한동훈, 손잡고 첫 합동유세…\"이재명 세상 막아보자\" - 연합뉴스",
+      "summary": "김문수·한동훈, 손잡고 첫 합동유세…\"이재명 세상 막아보자\"  연합뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE5jWDV1NTVlcmVwZVBhc2NVcjE3cENRSzdkaVpwOGlSdkYtcm5oRHQ1azFzT1Fibm5zbnhYbDVXLUFhNldiWFJKbDRsOTVRRURxRVoycm9PaXlqVk3SAWBBVV95cUxPeVdCT1Q1NXFpbjhLa2xlNGlNdFk4Q1JmZHNMRHVHYmNkSWZBTDJUUVVvaC0tWnRZa19ZelpCOUFKbHM2YVZUVGl5Ny1XY3VtcW9fWkVBS0ZkY3A3WmJpUl8?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:27:42 GMT",
+      "source": "연합뉴스",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "김문수, 삼성전자 평택캠퍼스 방문...\"헌법에 지방분권\" - YTN",
+      "summary": "김문수, 삼성전자 평택캠퍼스 방문...\"헌법에 지방분권\"  YTN",
+      "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE00ZjlJaERTVEM4UG5INWVNbUhWeF8yYVZ3MkRRT3I2bVNiQjEyT1dTR2RfQTRKRVRDaUx4M2lTODQtQTBYODZJNjR6N2c0MEc1YzJtY3BmLWFPOHlTb0HSAYMBQVVfeXFMTXdNTldmdm4teGNITFBOTzdULWs0cjBwZW1RbHZqMGx2Q01KTGhfWW1WcGJhbjNscXlZQzNzMS1QbWRqTlNhUUR6SndpUC16bkY1R2hHV2RaOUNvSGRSOTZ3RF9FQ3BNdnhtbVFLblk1MHd6aEVteUFqNWhYYnd0cGZpTTQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 12:39:00 GMT",
+      "source": "YTN",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "[포토] ‘기호2번’ 김문수 대선후보 발언 듣는 시민들 - 천지일보",
+      "summary": "[포토] ‘기호2번’ 김문수 대선후보 발언 듣는 시민들  천지일보",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5Pc1lyekFNVnZYdE1MOTlRYjk4RGNBNkVtd2RremJaQ28yVjlzTXMtWlE1dXZhU0FPVW5kQTZLZUwzR3F3R3lYdUZvLTE3cm9sQlJfRE5CakNMVm5aQi01cHNRbjBRYjBDYXfSAW5BVV95cUxNLUQ2RENFSlJ6XzJHNzBkTHFTc1Nmd2VSS2FPeGc1VGd2eXRGQ3Q3cnphaW90WXAyUUxFUkphRmhzVklFMl92aDBKOFZVRlFONDA4OVB4cjVqSk0yT2tFc3JBczdaSjlVUHR0cXMtZw?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 12:18:57 GMT",
+      "source": "천지일보",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "[대선 D-8] 김문수, 삼성 평택 찾아 'AI G3' 공약 강조…'진짜경제팀'도 출범 - 전자신문",
+      "summary": "[대선 D-8] 김문수, 삼성 평택 찾아 'AI G3' 공약 강조…'진짜경제팀'도 출범  전자신문",
+      "url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTFBBRUJrMllhQS1naDlibWNqTU1QNGs4QWlFVF9kMHFCRmd5MGc5bHJUcWN2bW5PdWhtZ0ZUSE5NYjNtdVF5cWY5RzFPcDlwZw?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:40:59 GMT",
+      "source": "전자신문",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "‘전직 경기도지사 총출동’ 김문수 지지 호소… 경기도 표심 공략 [6·3 대선] - 경기일보",
+      "summary": "‘전직 경기도지사 총출동’ 김문수 지지 호소… 경기도 표심 공략 [6·3 대선]  경기일보",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFAwNzctUFY0Nml4aUhRamd5QTFveU4yUU5DcnNOMExkeWhleXBLMFlJcXFVdWJ3MW1qTThOaldQdGlUTGZKR0xSYXZ0SE9EV1RGaUU3Z0FJVHVLZG8?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:09:00 GMT",
+      "source": "경기일보",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "김문수 \"진짜와 가짜경제 대결\"…경기지사 시절 성과 부각(종합) - 연합뉴스",
+      "summary": "김문수 \"진짜와 가짜경제 대결\"…경기지사 시절 성과 부각(종합)  연합뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE41V2c5SnpuOTJIODRUN29mdHlmN2ctRWZnelowYVc5d3JFajZibDc0RTUtTXhaZEVmNlo5c29DZ19hcnlqamU0VjFfOUZXNXZCOWtkUklMUFd0M0J0LUZheNIBYEFVX3lxTE41V2c5SnpuOTJIODRUN29mdHlmN2ctRWZnelowYVc5d3JFajZibDc0RTUtTXhaZEVmNlo5c29DZ19hcnlqamU0VjFfOUZXNXZCOWtkUklMUFd0M0J0LUZheA?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:49:32 GMT",
+      "source": "연합뉴스",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "시민단체, 김문수 고발…“부정선거 의혹 제기한 적 없다는 발언 허위” - 한겨레",
+      "summary": "시민단체, 김문수 고발…“부정선거 의혹 제기한 적 없다는 발언 허위”  한겨레",
+      "url": "https://news.google.com/rss/articles/CBMickFVX3lxTE1TaktiN1JVRGhORzRsT0lrbmFxZGVkSGRnTFJ0YjV5YU56TlJiNWFPdXFhQ3ZrMGhPWW0zdHQtdlctVVhKQmtxRE5DVko0TjdXSzYtaW1GWHF4Q1hKX1R5NkhjdXJRUTBjdnpXOXlFcDkxdw?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:13:00 GMT",
+      "source": "한겨레",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "김문수·한동훈, 손잡고 연단 섰다... 서울서 첫 ‘원팀 유세’ - 조선일보",
+      "summary": "김문수·한동훈, 손잡고 연단 섰다... 서울서 첫 ‘원팀 유세’  조선일보",
+      "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxNeVFOZjFSX2FiYThWcjFYb3ctdXhVRDAzMEloQTZvdGY4WVBmcFZsa2dCaEo3Vm5uaWtnTkJxRlVXdzRwcmZ0ZEs5VnhKZFVGT090eUNYaG44R0xPbE03TXpraS1YV3FFMzRENmtIMDVJTWwtZXdkQjQtNUlKMDlhUWMtb0FiTUdsLTBn0gGfAUFVX3lxTE5FNjBTWTlsMG9oaFFDcENqcEgzQlpiYi1TSktTVk5iSEJKOFV5VDRZTy1KU0N0ZC1reDhVSHlNN0oxME04Y3FZUWpscXZTYVdRRkZPb3BzOHQ4RE0xWTRFRmpWN2JtSzAtZXUyd1p4Ukxud1hrUTFmckVEb1RkcEVybVJKVHNTQzBHSDBkMEhkeC1ZS3FDREhXcW1aZDN4NA?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:33:45 GMT",
+      "source": "조선일보",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "김문수 손잡은 한동훈 “계엄·부정선거 확실히 청산해야 승리” - 한겨레",
+      "summary": "김문수 손잡은 한동훈 “계엄·부정선거 확실히 청산해야 승리”  한겨레",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTFB0c3hmWmY2bVllX0I4VGFfdm54bnA3YjJHMVU1THdVLUwyMUJyd1NQOENRcG1yakNTU2g1Ui04RTBuM2t0dmNCTXhpVEpIN29mR2F3Tk8wQ2tPdFJjcTNaRkNOZGI3cTJSb3c?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 13:14:00 GMT",
+      "source": "한겨레",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "김문수 대선 후보 \"지방 주도로 잘 사는 대한민국 실현\" 약속 [6.3대선 열전] - 네이트 뉴스",
+      "summary": "김문수 대선 후보 \"지방 주도로 잘 사는 대한민국 실현\" 약속 [6.3대선 열전]  네이트 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiU0FVX3lxTE1rNGRIRFhNT0hicDJ4NzM3dmpPN3gxcDAyNTJlWGZ0MFJWZ1lYVHZyNkpZNzBRaVhQVFNJTGI4dmJEVGwtNUFMc2Q2QTNmXzdzMk9n?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:16:00 GMT",
+      "source": "네이트 뉴스",
+      "sentiment": "중립",
+      "query": "김문수 대선"
+    },
+    {
+      "title": "\"나이로 누르면 한마디 안 진다\" 측근이 고백한 '싸가지 이준석' [대선주자 탐구] - 중앙일보",
+      "summary": "\"나이로 누르면 한마디 안 진다\" 측근이 고백한 '싸가지 이준석' [대선주자 탐구]  중앙일보",
+      "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE42THQxaUNXMHJzam5RcmxzMGJFR29QcnNwZTM2WHFPcURCRTQ0czhQb2Fpa0lLYVNWb01CR29TSjNrb2JCWW9Na251dkVuMGpHZlpyUE1n?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:50:28 GMT",
+      "source": "중앙일보",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "김문수-이준석 막판 단일화 여부 초점…역대 단일화 언제 어떻게?[오목조목] - 노컷뉴스",
+      "summary": "김문수-이준석 막판 단일화 여부 초점…역대 단일화 언제 어떻게?[오목조목]  노컷뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiUkFVX3lxTE9TRlpUVmJMeVg2dFhfa0VYZHJtZDZpU21sSGpjMW5UWTBVQ1NKaDVpa281M1NfeHZpZXFpZ1ZzbUtyb3RYcUp6dzZOcGlDb3l2alE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:43:00 GMT",
+      "source": "노컷뉴스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "이준석 “단일화 가능성 0%, 金 사퇴뿐”… 국힘 조건 제안 일축 - 동아일보",
+      "summary": "이준석 “단일화 가능성 0%, 金 사퇴뿐”… 국힘 조건 제안 일축  동아일보",
+      "url": "https://news.google.com/rss/articles/CBMid0FVX3lxTFB3cFVlVWZnWWY0eEFoemU4NDVoOE5YeHY4UnhDZTdEajhHUW42U3lncUNJQ3N1ZUlINktRS1ZhWlV1OHFMLVptejhMSzF3ellhUEVoS3JjcHoyWUUyOHA0THU5aHplYkZ0MVlfT3lLWGQ5QTgxVG9B0gFmQVVfeXFMUFdjZXRiMGRoVkhSM3BnNTFUSlpqVEQ1NzBUZG1QRDNLWlZsU1pzSW55RUp0QXJ0a1pYQmZOZzlZMEt4dUtFaDU3T1ZkOXM3YlBVRzNlYU5oUmJhNW5iRVRQVXdPRzlR?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:26:00 GMT",
+      "source": "동아일보",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "이준석 “대선 완주”…권영국 “주 4일제 시행” - KBS 뉴스",
+      "summary": "이준석 “대선 완주”…권영국 “주 4일제 시행”  KBS 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE1LZmhRREpWQnRYLWNiaXZUMFBFdkJsZUlfeHE4S1B1ZlNwbS13MmpVYXV6bkpFVXZxeWJFWXJaTE9kQTcyS0RENGhDd1hJOTdiZkZTRjc4SC1zR3M?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 14:21:00 GMT",
+      "source": "KBS 뉴스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "국힘 “이준석, 단일화 조건 제시를” - 인천일보",
+      "summary": "국힘 “이준석, 단일화 조건 제시를”  인천일보",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE5WRWZLRGNXQkstMlZTa0VQakxHdmFraVUtWXZJZ0pmOENoZ0kwanFEZGUwbDc2YWdjRVJUNkpEc2pQTWZuVTJ6MmgwN3BDRm4wcFVlMWhFMU1QMi1hZ19zMjhsakhad2czSHFZdkVHSmM?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:46:00 GMT",
+      "source": "인천일보",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "대선 앞두고 ‘노쇼 사기’ 비상···‘이재명·이준석 살해협박글’도 적발 - 경향신문",
+      "summary": "대선 앞두고 ‘노쇼 사기’ 비상···‘이재명·이준석 살해협박글’도 적발  경향신문",
+      "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFBzaWZfSktYMGVZQzFscFdUN3EtVW5wNHdaN3NRWFhuOVlHMVZUeC1aUU95V0tiYVlaR1ZRaW1JeEp1TWpBYVhzZXpOOEhZb1lDeVRJemg3TUs2d9IBX0FVX3lxTE1yTWR3cnJrdVNPTmwyNlRxc2hPc0xmV2s4c3lXMDBvVjBBVFR5RDNrM2ZNRFR6eEhJb2VEck1iYW1NNU5jMEkzQmp1YS1Mc09tTjdha1dJQmFuUkZieU4w?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:47:00 GMT",
+      "source": "경향신문",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "[대선참견시점] 이준석의 '노무현 장학금' / 설난영 '노조하게 생겼나?' - MBC 뉴스",
+      "summary": "[대선참견시점] 이준석의 '노무현 장학금' / 설난영 '노조하게 생겼나?'  MBC 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMieEFVX3lxTE9pcURQa2c0YWRMX3JyQ0xyVDlXYlFaanRVT2lPdk9NdWtYUmNNLXpFZS15emFtcDBvSGp0Y2hxTGVILURhVHF0bGU2N3pFVVhFNWd6LWI2endZSjBnd3NoNVZOdmNEdkV5dG85V1pKenpYN2liTzNvVdIBeEFVX3lxTE1lcGpfYmpXdGJCSDZGSWU4b3pYQjY2MjRtQWZ5N1pLQTlRM1RlYmRoQjVWc2t4STBKZW5Iay1hRUU5NTdsc2M1SFkyVWtPQk9oREdjNVlWeDh3T0pWdVAxVkJmdlJ1RzJmX1JENy1aQnMwc1Bkck9oMg?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:17:33 GMT",
+      "source": "MBC 뉴스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "[6·3대선] 이준석, 온라인 공약 플랫폼 공개…\"작고 효율적인 정부로 개혁\" - 대경일보",
+      "summary": "[6·3대선] 이준석, 온라인 공약 플랫폼 공개…\"작고 효율적인 정부로 개혁\"  대경일보",
+      "url": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE1VSFg1VjJuYkYwMkV0Rmh1SF9BMThBbUN4VkI0bkttTExrN2dmdVYwY0lXLV9ZdVRtVFRGSGl5ODZGRWhOLUNZbDlEZGRBTFZmb29pNFJNTUQ3OVJodTg3NzBMaV9kWEFR?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:49:09 GMT",
+      "source": "대경일보",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "이준석 “지난 대선 안철수도 비호감 높아” 발언 맞나 - 미디어오늘",
+      "summary": "이준석 “지난 대선 안철수도 비호감 높아” 발언 맞나  미디어오늘",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBrVkFsZ01GOWtnWjB3enJLYnhvSEZ3YjBKSjZmc1pIeUlMcUVpTDZNVFo4V2ppY2Joa1dXVFpFVTl4OFJjWDBpd2owbUpNdEpENTJlbktqOHc3VHFTWGJhb2dXMS03TVRmeThRX05mUzk?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:34:37 GMT",
+      "source": "미디어오늘",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "[기획] ‘대선 완주’ 재차 천명한 이준석, 단일화 물 건너가나 - 시사포커스",
+      "summary": "[기획] ‘대선 완주’ 재차 천명한 이준석, 단일화 물 건너가나  시사포커스",
+      "url": "https://news.google.com/rss/articles/CBMib0FVX3lxTE56Wkt0V0pGYzNaWVlXRHEzaVhXdmtON3VRNWUtUDBHX0RXZmdTVm12WWZ2RDhFWW5wZDlKVlZGT1UtMy0xVTVoLURUdkVqcGVkMDFHcUlYZ2s4TmVyLXpTTGowT25EMVFJeGpKemlYUQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:26:12 GMT",
+      "source": "시사포커스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "[6·3 대선] 김문수냐 이준석이냐, '샤이 보수'의 선택은? - 매일일보",
+      "summary": "[6·3 대선] 김문수냐 이준석이냐, '샤이 보수'의 선택은?  매일일보",
+      "url": "https://news.google.com/rss/articles/CBMiZEFVX3lxTFBIb0Z3VkwzV0ozU3dxbmhsWlRUV3JoNlRmRlpIV3pudl9lbThNajA5UUF2cUtqNm01bUxPakg5MVdCS1JxbW1TWHo4aXlWbUZDYUlDQXBJdWR3V0xNX1FKTGE5MXk?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 06:13:07 GMT",
+      "source": "매일일보",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "대선 8일 앞 '단일화 논쟁' 계속…이준석 \"요즘 협박 많이 들어\" - JTBC",
+      "summary": "대선 8일 앞 '단일화 논쟁' 계속…이준석 \"요즘 협박 많이 들어\"  JTBC",
+      "url": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE4waDMyTE5rQldabEpGQ3lJR1ZiYnZWOU9ObXlreVd4TEl0Y3JBWVRSc09lWlNFWmZkQXVyTDBReWdHR3REUl9uTlRJME9KNks5Skducg?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:02:00 GMT",
+      "source": "JTBC",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "김문수 “반도체 산업 전폭 지원”…이준석 “대선 완주할 것” - KBS 뉴스",
+      "summary": "김문수 “반도체 산업 전폭 지원”…이준석 “대선 완주할 것”  KBS 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBITWJfY0Y5TW1lQ05rS1RTNkJyNmNTbjJZU2ptU2pHZU50NVpWbXEzZG5sYWJpWmJvZERIcW8wZmJzbkh1SUJCOTBzNXVkdGpNRXdEbFlhUmVGTFE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:05:00 GMT",
+      "source": "KBS 뉴스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "이준석 “단일화 있다면 김문수 사퇴뿐…대선 완주하고 승리로 응답할 것” - 인천일보",
+      "summary": "이준석 “단일화 있다면 김문수 사퇴뿐…대선 완주하고 승리로 응답할 것”  인천일보",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE9vMG9tZndKdUp1WmxDakRmVmQ5UklaeEREb1A0OW1fOXJkMGJtR0tDYjllRXNVMFZnN18zOW80Znk0LTJZN1BTTEwySFltMnc4cDB0Y3hUTXRCR2U2OXNSV2Zic09PWHZxR1Jnc3FPaXE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:35:00 GMT",
+      "source": "인천일보",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "김문수 “반도체 산업 전폭 지원”…이준석 “대선 완주할 것” - KBS 뉴스",
+      "summary": "김문수 “반도체 산업 전폭 지원”…이준석 “대선 완주할 것”  KBS 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE1pa1hDZzNwQ0FjaUQtM0Y5YUZ3Y0VHVEcxam9vOHZ3VmJRN3UxaGRidlptTk40NVBqc2hyQW5vQUxJUThfUlpER0VKVkI0WDhWd1ZmZGxobzRzQTg?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:03:00 GMT",
+      "source": "KBS 뉴스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "김문수 “반도체 지원”…이준석 “대선 완주” - KBS 뉴스",
+      "summary": "김문수 “반도체 지원”…이준석 “대선 완주”  KBS 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMia0FVX3lxTE9PSTZianNDWmZwX2RlazhtSnZ4cWVlTllWbFc1d1FqS2JrV1dsbHdLMFB1d3BFQVBabGFzenBmSVhEa09YT05iRlUzOW1yYlp3VEhyUDRPMlA1Y3FpZmQxOVJlX2FIU1Z6Q0VB?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:04:00 GMT",
+      "source": "KBS 뉴스",
+      "sentiment": "중립",
+      "query": "이준석 대선"
+    },
+    {
+      "title": "SNL 출연하는 대선주자들, 바쁜 일정 속 코미디쇼 선택하는 이유 - BBC",
+      "summary": "SNL 출연하는 대선주자들, 바쁜 일정 속 코미디쇼 선택하는 이유  BBC",
+      "url": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE1HWGVXb3p0eVJsSTRwbEhEX04zdHVObXl2ZmdSYm1PWjJtMm9vYkZVWndORVBYSXpONlEwcEUzcHZXYVpfeGZQbmtJdHc4TGZGUE1mellYRFVhQUdo0gFiQVVfeXFMUDhTZi04bmJNUzNVZWtCeVNsMWlDMXluWlNrek1SOVI1VWg1SEpPSjZ2RndoN1hENXRKbmt1bGJZby1PZW1sUnNJZnp2WDlYUFVTRTd2VEJqNUtLOGU0MVBGdFE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 06:02:25 GMT",
+      "source": "BBC",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "대선주자, 지방·농촌 살리기 해법…‘중앙정부 권한이양’ 초점 - 농민신문",
+      "summary": "대선주자, 지방·농촌 살리기 해법…‘중앙정부 권한이양’ 초점  농민신문",
+      "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE5tSDE1bVUydjhMV1FLQ0VYMHJIMHUwZFFZeng4UDBMZFR1SmhNZU9UaUV1SHl5bFNvb3ZkdW0xWm1mZFNKZkpsMm16OWxTelBUUFozNEdLQVVQUQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:38:00 GMT",
+      "source": "농민신문",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "[2025 대선토론 일정] 대선후보 27일 마지막 TV토론 '시간·중계·주제는?' - 국제뉴스",
+      "summary": "[2025 대선토론 일정] 대선후보 27일 마지막 TV토론 '시간·중계·주제는?'  국제뉴스",
+      "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTE41cG9HZzBPLWFqTDYtVjMtRWx5bGxaZ0dmTW1VZ0dHTGtnSmtnSGxONFVkVnk1a1pfTlptZFlmb2t0X3hIc1VIYjhGZGxYU1ZVYjFJdkt4YWtyaG0wNUVQYXJrZkludDMwVlYzZ2ln?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 15:07:00 GMT",
+      "source": "국제뉴스",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "대선 D-7, 광주·전남 표심·막판 변수는 - gjdream.com",
+      "summary": "대선 D-7, 광주·전남 표심·막판 변수는  gjdream.com",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5iX0oxOUZNaXhoTnZ1RF9nZmxob3dYYWJ4ekNjZ2tlbC1XU2tHM24wc1FhOHNuZjRWY2NoWS1VWUdSMV93X3BxdHRQMXRKQzlZR21seUZ2LVZpYU54ZkRKWVdFTmJHdm1VSHc?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 15:10:00 GMT",
+      "source": "gjdream.com",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "난해한 깨알 공약집 \"이걸 누가 읽겠어요\" [심층기획-2025 대선 매니페스토-내일을 바꾸는 약속] - 네이트 뉴스",
+      "summary": "난해한 깨알 공약집 \"이걸 누가 읽겠어요\" [심층기획-2025 대선 매니페스토-내일을 바꾸는 약속]  네이트 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiU0FVX3lxTE8zQmgxbVBIYkFIT3R0bWZCcU5CXzJRd1FJZXVEdGNYbkozekI3a3RyVWxDVmJBZFlEdGdiZ25vNm9OV1A5R1hXT3BKQUhFT2UwRzVR?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 12:06:00 GMT",
+      "source": "네이트 뉴스",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "[카드뉴스] 한눈에 읽는 2025 대선 3대 후보의 ‘보안·안보 공약’ - 보안뉴스",
+      "summary": "[카드뉴스] 한눈에 읽는 2025 대선 3대 후보의 ‘보안·안보 공약’  보안뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE4xdmUweHJ0ZmRLdWo0Z1FHS1kxb1RIc2dHZ0ZxNEFnUUhmTWRmY0J3RGx0dm9TYjVIT1FmT0ljSEhfR2hwT1JaQ21uc09GMDUzRDJkeUlrU1NsMlhfdUE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 04:43:00 GMT",
+      "source": "보안뉴스",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "선택 2025 제21대 대통령선거 - 뉴스핌",
+      "summary": "선택 2025 제21대 대통령선거  뉴스핌",
+      "url": "https://news.google.com/rss/articles/CBMiYkFVX3lxTFBldE12ZDVRTnlxeTR0QVVXOWwwWWp1ZDhsVXZIT3dvMnJJOUZDY2JWLVZfUFpCdC15Y3FEQndrd0o3MnBSZDIxcHoza29xa0hyMzdrYzhaREFlOENwVXNhVVd3?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:45:05 GMT",
+      "source": "뉴스핌",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "권영국 “김문수 후보, 노란봉투법 왜곡 선동” - gjdream.com",
+      "summary": "권영국 “김문수 후보, 노란봉투법 왜곡 선동”  gjdream.com",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1HdmJqVmtqZy1Yb3RkbDdqNWxrRDY5Wk5RVUoxelFWN1RGaTV2bE1wQ1A1clZCUlR3QmpSd3hHenppdVZYTjJSY3h5TEZTTk5raEdycjkzUEVJQ2dkUkdXRFc5dTJZWFJLTEE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:03:06 GMT",
+      "source": "gjdream.com",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "과학기자들, 대선 후보 과학·의학 공약 검증한다 - 미디어오늘",
+      "summary": "과학기자들, 대선 후보 과학·의학 공약 검증한다  미디어오늘",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTFB3Njd1bHUyTENEU203VXh6bWQ1N2JyanFYLUdRNjFNSWxiSVRwUFl4WTZ6RlQwTUlTY1pudFhNdWlzOWpzcDVYLXZXOU9xYXZqZnA0ZXVTRG45VXg2WHBvMDJHUy1kZlc0WC1ZaVhRTEY?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:48:02 GMT",
+      "source": "미디어오늘",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "단일화 목소리 키우는 보수층…10명중 6명이 ‘찬성’ [매경·MBN 대선 여론조사] - 매일경제",
+      "summary": "단일화 목소리 키우는 보수층…10명중 6명이 ‘찬성’ [매경·MBN 대선 여론조사]  매일경제",
+      "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE9qRXRCNFlxaVVzdFhBb0Vqb2ZjM2dYeWh5d0NsU3QwTWdhLTJYWElCZmdpaDg2bVVhZ1ZSU1BnRGxNSlQ3SkRIc1JmZUlJNVIxMVQ4Vm9n?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 06:11:22 GMT",
+      "source": "매일경제",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "선택 2025 제21대 대통령선거 - 뉴스핌",
+      "summary": "선택 2025 제21대 대통령선거  뉴스핌",
+      "url": "https://news.google.com/rss/articles/CBMia0FVX3lxTE1qd0NnaEFkUUFGcDQycmdiSFBCNjllY3NhWXVxZ3RLbk5odUQ5dy00NlB2ZEFtUWRNaktKck9VRXlhM3JLNEFXYng0ZTcwcmpnYmQ3NkdfUVpzTkI2WndoZDdXby1ueHdCZHNV?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:10:00 GMT",
+      "source": "뉴스핌",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "이재명, \"경상도·전라도 그만 싸우자…타협해서 같이 가야\" - gjdream.com",
+      "summary": "이재명, \"경상도·전라도 그만 싸우자…타협해서 같이 가야\"  gjdream.com",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBRYXFnc3dYQVpkbUF4NnBPT1Nac2FXN1RKcHN3UzdneXJ3Z09pWElkWlR0RjJMMWRLSzI5bWg0NWpEdlN0ME5FV2tSdjZpR09oM3ZOamptQkp0VDR5UDIzb2NjSWVxZlRDeVE?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:06:22 GMT",
+      "source": "gjdream.com",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "재외국민 20만5천명 투표…명부등재 선거인수의 79.5% ‘역대 최고’ - 한겨레",
+      "summary": "재외국민 20만5천명 투표…명부등재 선거인수의 79.5% ‘역대 최고’  한겨레",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBUZVFaUFBKaWVfODZEcVQ3bXdfLXd1UUtDV2R2Zk0xMXhqVXg3SmZOZzlBYTM1UHA1TGxFZk95ZWlYbG04cnF4cHdZdm1tUnp5bUZHNWdHMFRyS1B3dlYwdlRYdkc0UlUzNHc?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:11:00 GMT",
+      "source": "한겨레",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "대선 공약집, 일상적인 말 쓰는 게 기본…정보 통일 중요 [심층기획-2025 대선 매니페스토-내일을 바꾸는 약속] - 네이트 뉴스",
+      "summary": "대선 공약집, 일상적인 말 쓰는 게 기본…정보 통일 중요 [심층기획-2025 대선 매니페스토-내일을 바꾸는 약속]  네이트 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiU0FVX3lxTFByczJxTDVIUzV0V1RWNVV1TDAzamlSQ05LTkY4MEZ5RFF6S2hraWFNeTFlVndENUVvcjhZSG1qUTZjYkdCR2pvMzBkUjl6QnFZenE4?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 12:13:00 GMT",
+      "source": "네이트 뉴스",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "이재명, 중원 표심 공략…“내란세력 귀환하면 후진국 전락” - gjdream.com",
+      "summary": "이재명, 중원 표심 공략…“내란세력 귀환하면 후진국 전락”  gjdream.com",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTFBUVEUycXZIRXJ3bDlGNWtSTzEtQ0Vlc1dlN0xkTHlFbVBkV2lrdHhnRHNIMmtnY1RZb2t1a0JrSllYcllOU29VeWJsTUpHWnl1RXFMenMtZ2hpaWxhRXoyWGw3SHB3d0JLYmc?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:03:47 GMT",
+      "source": "gjdream.com",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "김문수 “공공기관 2차 이전 조기 추진” - gjdream.com",
+      "summary": "김문수 “공공기관 2차 이전 조기 추진”  gjdream.com",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE9MdTE4ZGhVSTNOLWZpSHhsakx5azJ6NDJEbTNENDIyWVR1T3RHRHcxNGJ1OFFjWEotRVEwTXpCWEpuZko2UjI2dmRkUk1wUmpmZi1taWMyTUxleHlucV9lNWd3UlN2ZEEyV2c?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 05:28:29 GMT",
+      "source": "gjdream.com",
+      "sentiment": "중립",
+      "query": "2025 대선"
+    },
+    {
+      "title": "21대 대선 재외국민 투표율 79.5%…20만 5268명 참여 - 중앙일보",
+      "summary": "21대 대선 재외국민 투표율 79.5%…20만 5268명 참여  중앙일보",
+      "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE9tM3U2S1ZGazhHZS1sRW1ZSUhjR0lISzRwdEtTNVdkQTBCa0w3NkhiZjNiLTdLSVhoam5mQ0RZb3V2LUZWYV9YSjRfN0lTa1gtTWZlZ0Nn?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:30:56 GMT",
+      "source": "중앙일보",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "21대 대선 재외선거 잠정투표율 79.5％...역대 최고 - YTN",
+      "summary": "21대 대선 재외선거 잠정투표율 79.5％...역대 최고  YTN",
+      "url": "https://news.google.com/rss/articles/CBMiXkFVX3lxTFBidmExcnhrTzN4cXNQd200NU5KcVpNVVcxOWZoN1NISWl4WlVjaktob2FOWnRyb0g0OTRqMU9LTHZVNnBrLXIzTi12Q3VJYlBxUzVwQnZXTkZGWDBXLWfSAYMBQVVfeXFMTm14Zmxrb21YU2d0aVVsd0JGVEI0dFJPTnFiXzRFaGRNakdWZUZ2NDhWdE9LTy03Rm1lQzVPWkRnNGRRMHl0SUNtd1Zqa3lrVy1YN1VuY1p0UnowNTNLNnB2dElJZ1gtZlhmNGJ1QjFxeExPSFRxZkRwSTI4RUxVbVg0ZzQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 14:01:00 GMT",
+      "source": "YTN",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "21대 대선 재외선거 잠정투표율 79.5％…역대 최고치 기록 - 노컷뉴스",
+      "summary": "21대 대선 재외선거 잠정투표율 79.5％…역대 최고치 기록  노컷뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiUkFVX3lxTE9hMlQ5d09feG9aNlhOc0VUZURva212dUhYbmtmREY4ZHhMTldwMFlsUTJ6Mk5PWHpQZG5JVWRUOWxzaEFzaUU0NzEybVpQOXNLS1E?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 10:33:00 GMT",
+      "source": "노컷뉴스",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "21대 대선 일주일 앞인데… '수백 조 공약' 재원조달 깜깜 - 중부일보",
+      "summary": "21대 대선 일주일 앞인데… '수백 조 공약' 재원조달 깜깜  중부일보",
+      "url": "https://news.google.com/rss/articles/CBMib0FVX3lxTE9ZenQybFNCUEpaVHBNeWpqQzdBTUVBMUhpTDl1ekNEOFZfZUJ4VGxsN3l3bDNudDRnNzctZENRWVJwYjlUamV3RTBjX2tMZmlLVVBCME53bUlhcGFmMkkyTVhtZmRsaFctNlBTTkRyMA?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:30:15 GMT",
+      "source": "중부일보",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "재외국민 투표율 79.5% ‘역대 최고’…지난 대선 71.6%보다 크게 상승 - 동아일보",
+      "summary": "재외국민 투표율 79.5% ‘역대 최고’…지난 대선 71.6%보다 크게 상승  동아일보",
+      "url": "https://news.google.com/rss/articles/CBMid0FVX3lxTFBOTnptUzVHSWhGcnJRbFpXVVpwYnpLeU1rajBxampFODQxRDJRMjNMMURzU1VYT052VUNTWjBQVklLVEtIN3R6VUkzRFZCWkd0RkdLcjhQNmRmbGc4X3pzUzJNdWxod0M3OTN6RmFpWFMyYWFsc1RV0gFmQVVfeXFMUHA3bHRxcTdNX2tGZXZoOW1oZ3U3a2g5YnNqRjhQc015WnZWaVFYZ0V5RjBhV2U0aWdHZHh4Y2lLVWg3YjFFYjZud0FIdk9HTW9ZbWVILU5WRy1VWmRQUUFmckdxRGxB?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:56:00 GMT",
+      "source": "동아일보",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "‘21대 대선 결과의 의미와 향후 전망’ 토론회 개최 - 경제정의실천시민연합",
+      "summary": "‘21대 대선 결과의 의미와 향후 전망’ 토론회 개최  경제정의실천시민연합",
+      "url": "https://news.google.com/rss/articles/CBMiR0FVX3lxTE5kTmx1NjFXVUZ4LXdISFBQMklWbnhQd3c4MTdsRzAzdDJ3eUVVV1pkaW5FM1dpcEotcDVlZUkxb1dQYWotS0ww?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:40:01 GMT",
+      "source": "경제정의실천시민연합",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "제21대 대선 선상투표 시작…454척·3천51명 대상 - 연합뉴스",
+      "summary": "제21대 대선 선상투표 시작…454척·3천51명 대상  연합뉴스",
+      "url": "https://news.google.com/rss/articles/CBMieEFVX3lxTFBldTdHdHJ2OWFBRWV2UmNlYk1ZQ1M4QXc2S3JuWlhrdXNJYzJxcXM2Z0VUbnhpdWFETmVsNUpRdFdMVF9rTkZ6bHdFTUZhcGgyQURvRjdRc1ExZjk5eWRCUG14dWlCQUdEbGNEUGVodmxmQ1F4a0VtZQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:24:37 GMT",
+      "source": "연합뉴스",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "[21대 대선]재외국민 투표율 79.5% ‘역대 최고’ - 재외동포신문",
+      "summary": "[21대 대선]재외국민 투표율 79.5% ‘역대 최고’  재외동포신문",
+      "url": "https://news.google.com/rss/articles/CBMibEFVX3lxTE5lZ2FqdV9lQnRzY2k3eVpBc2duZGFBN0Z3cnBveGMzenhXRkYzOWItbzNpRjZjU05UQjBOSFEtZGt2VlpjcEJDd3QtUk5HZDFNNjdmbVJjY2ljd2VrYmFNeEhIYjcxbER3blA4eQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 14:56:25 GMT",
+      "source": "재외동포신문",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "21대 대선 재외선거 잠정투표율 79.5%…선거인수 대비 ‘역대 최고치’ - KBS 뉴스",
+      "summary": "21대 대선 재외선거 잠정투표율 79.5%…선거인수 대비 ‘역대 최고치’  KBS 뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE1mVEZxOHYtM3M1MjUtNUpWa1FTcFdXOW5jeS0yMWZzTlpaeGN6aW9yQjFwUVQwVUNrVTBZNnpGOHFlcDFZcHg1NTN2eE8zUVVtaWhaaFJJQWZWeWM?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 11:02:00 GMT",
+      "source": "KBS 뉴스",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "발달장애인 위한 제21대 대선 ‘쉬운 10대 공약’ 웹사이트 공개돼 - 비마이너",
+      "summary": "발달장애인 위한 제21대 대선 ‘쉬운 10대 공약’ 웹사이트 공개돼  비마이너",
+      "url": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE95QS1hOU1VdWVVdFBEM2I5eUZwa1MtT0hWN0YzeDdCelhnSGJtZWZOM0JCOUJZdDQzQm9IOXRCOV9aUUhLVndNNkhnOHZQZkdXbU4wRmJjVkN3aWhzd1ZkQ1ZLNFdObGR1?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 07:31:30 GMT",
+      "source": "비마이너",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "선관위, “21대 대선 재외투표에 20만 5,268명 참여” - 통일뉴스",
+      "summary": "선관위, “21대 대선 재외투표에 20만 5,268명 참여”  통일뉴스",
+      "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTE9fV3FLZl9tejNXbjZiM24xZEZpN2NVNkVHU0JZYkVJOFRIb19lQUpKZ0k0NjdqWlA3MnNUSTJoMzJZck1rZDdsdk9mOGhHZGRBM21SdFFVaC1CLTRxeDF3ay1PMTBKS1hFRTloUXdR?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:06:02 GMT",
+      "source": "통일뉴스",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "[21대 대선 공약 검증] ‘재생에너지 vs 원전’…기후 공약, 답보와 후퇴 사이 - 경향신문",
+      "summary": "[21대 대선 공약 검증] ‘재생에너지 vs 원전’…기후 공약, 답보와 후퇴 사이  경향신문",
+      "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE9lWXZZak1ZbGlnd3h3ZDFKNFRlTGNTQXR4dWdablJMWkNVUEVvV3lucTZVR0Vqdy0tYXZ1b0NLYV8zMnpGcXQ4aWgtb0VSS3hsVzVFelpVTk0wZ9IBX0FVX3lxTE4zS09teUdKX0NvbzJlQVliR3NCY1pFY0JjLU1BMnMzVFpOYmdtRjBHMjZxaVkzLU5Pa3Fzb2g5Tk4yRjdKcEFsVjVCYVJUNTNZRlpveHFkMFJITGlJNDQ4?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 06:51:00 GMT",
+      "source": "경향신문",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "제21대 대선 사전투표, 이번주 목·금요일… 토요일 아냐 - 조세일보",
+      "summary": "제21대 대선 사전투표, 이번주 목·금요일… 토요일 아냐  조세일보",
+      "url": "https://news.google.com/rss/articles/CBMiX0FVX3lxTFBBNWZheDMtYmpjZ25UaWVicWk3V21FY25FQ1MtZUM4dnM1bG83Yi1fUjY2bWNxWnVqUnhjNU9BOGFrTWR6Wkk3WFhnZWNsV0VOaUliSnY1dDVzTkVpaW1v?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:27:33 GMT",
+      "source": "조세일보",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "제21대 대선 재외선거에 20만5천명 참여 - 월드코리안뉴스",
+      "summary": "제21대 대선 재외선거에 20만5천명 참여  월드코리안뉴스",
+      "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTFBPUmhWeWdLTi1mZkE5LUxaS2NIWk0zUWE2TWtFd0o2VWpyUGktU3F2dkROU1NfQjFnNFpoV0YtOUcxaG9ER1BYRV9ibXVaM2EwS3lpNGpjRHVFWUZHVkp1Q192bGRjUHRDSWYwaUV3?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:45:00 GMT",
+      "source": "월드코리안뉴스",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "투표자 수 매시간 공개... 관리자 26만명 모두 한국인으로 - 조선일보",
+      "summary": "투표자 수 매시간 공개... 관리자 26만명 모두 한국인으로  조선일보",
+      "url": "https://news.google.com/rss/articles/CBMiiwFBVV95cUxPS0lvcEg4RDJNS1RyQ0xTZUExZnVuZ09KWnc2Tnd6SjR4NG41Q0Q1dF96dGdBSlU4THV6SG1lSjF4UjdKQy1NaVNhQ21GMlBoYWRIWE1RcHB5Z04xdTJ5ZnNYU19aUkZhVkF6N0RPY21KMU5TVGJiQnNaYWZOT25DX0pRMzZleHdFdUVJ0gGfAUFVX3lxTE1lR0FZdmo3aXB2RG92eU5EYWdfOWVwX3ZvOGtPZk40WHc4TkVFNzBqV2k3OWZ3RXZMbEY1bWlBbUh0ZFMyUFNXaXdidV83UjFfeVl0TDI2Zm45amJ0TjlpSE1wLW5Nc050NGdFNVN1TTJXN2hyQ0Q2cXRFNnhkN3lmUUJuNTdGaUhyZnczdlRtZ0ZOT0JranlHMlNsSTFoTQ?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 12:34:00 GMT",
+      "source": "조선일보",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "21대 대통령 선거 앞두고 충북 경찰·소방 대비 태세 강화 - 노컷뉴스",
+      "summary": "21대 대통령 선거 앞두고 충북 경찰·소방 대비 태세 강화  노컷뉴스",
+      "url": "https://news.google.com/rss/articles/CBMiUkFVX3lxTFBjeEFQRlNTeVhNZkJSb1k3eDZIX2hQYVFTUlh6cGZveWtzUXpoUEx1UVRlOERPdHAydGlxMW55UTAtXzM3MEJJaDFyV2QxSlRfY0E?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 09:32:00 GMT",
+      "source": "노컷뉴스",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    },
+    {
+      "title": "모의평가 하루 전 실시되는 21대 대선… 고3 수험생 참여 떨어질라 - 중부일보",
+      "summary": "모의평가 하루 전 실시되는 21대 대선… 고3 수험생 참여 떨어질라  중부일보",
+      "url": "https://news.google.com/rss/articles/CBMib0FVX3lxTE1hSnptZ21oUjJqS1pDTEhRSjR1VzFMOGZ5WVpwN2ZlRFVVN1YxTFNZZHVyS1R6eWRlbmJ6UDBPdmZHR3JPd291b2V3VTJuamxULUFodG5pSjFwb21MdGtlbngwaUEwbVJBYjl0STE2Yw?oc=5&hl=en-US&gl=US&ceid=US:en",
+      "published_date": "Mon, 26 May 2025 08:42:01 GMT",
+      "source": "중부일보",
+      "sentiment": "중립",
+      "query": "21대 대선"
+    }
+  ]
+}

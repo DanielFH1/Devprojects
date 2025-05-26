@@ -27,8 +27,7 @@ class _PredictionPageState extends State<PredictionPage>
   late Animation<Offset> _slideAnimation;
 
   // === 설정 ===
-  static const String baseUrl =
-      'https://sideproject4-electionsimulator.onrender.com';
+  static const String baseUrl = ''; // 현재 도메인 사용
   static const Duration refreshInterval = Duration(minutes: 30);
   static const Duration animationDuration = Duration(milliseconds: 800);
 

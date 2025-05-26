@@ -1,6 +1,6 @@
 """
 대선 뉴스 수집 및 분석 시스템
-- 뉴스 수집 (NewsAPI)
+- 뉴스 수집 (GNews)
 - 감성 분석 (OpenAI GPT)
 - 트렌드 분석 및 요약
 """
@@ -18,7 +18,7 @@ from typing import List, Dict, Any, Optional
 import openai
 import backoff
 import requests
-from newsapi import NewsApiClient
+from gnews import GNews
 
 # 로깅 설정
 logging.basicConfig(
@@ -34,11 +34,8 @@ ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 # API 키 설정
-NEWS_API_KEY = os.getenv('NEWS_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-if not NEWS_API_KEY:
-    logger.error("❌ NEWS_API_KEY 환경변수가 설정되지 않았습니다.")
 if not OPENAI_API_KEY:
     logger.error("❌ OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
 else:
@@ -71,41 +68,41 @@ class NewsArticle:
 
 # === 뉴스 수집 클래스 ===
 class NewsCollector:
-    """뉴스 수집 담당 클래스"""
+    """뉴스 수집 담당 클래스 (GNews 사용)"""
     
     def __init__(self, period: str = "12h", max_results: int = 20):
         self.period = period
         self.max_results = max_results
-        self.client = NewsApiClient(api_key=NEWS_API_KEY) if NEWS_API_KEY else None
-        
-        if not self.client:
-            logger.warning("⚠️ NewsAPI 클라이언트를 초기화할 수 없습니다.")
+        self.gnews = GNews(
+            language='ko',
+            country='KR',
+            max_results=max_results,
+            period=period
+        )
+        logger.info("✅ GNews 클라이언트 초기화 완료")
 
     def fetch_news(self, query: str) -> List[Dict[str, Any]]:
         """특정 키워드로 뉴스 검색"""
-        if not self.client:
-            logger.error("❌ NewsAPI 클라이언트가 없습니다.")
-            return []
-            
         try:
             logger.info(f"🔍 뉴스 검색 중: '{query}'")
             
-            # 시간 범위 계산
-            to_date = datetime.now()
-            from_date = to_date - timedelta(hours=int(self.period.replace('h', '')))
+            # GNews로 뉴스 검색
+            articles = self.gnews.get_news(query)
             
-            response = self.client.get_everything(
-                q=query,
-                language='ko',
-                sort_by='publishedAt',
-                from_param=from_date.strftime('%Y-%m-%d'),
-                to=to_date.strftime('%Y-%m-%d'),
-                page_size=self.max_results
-            )
+            # 결과 포맷 변환
+            formatted_articles = []
+            for article in articles:
+                formatted_article = {
+                    'title': article.get('title', ''),
+                    'description': article.get('description', ''),
+                    'url': article.get('url', ''),
+                    'publishedAt': article.get('published date', ''),
+                    'source': {'name': article.get('publisher', {}).get('title', '') if isinstance(article.get('publisher'), dict) else str(article.get('publisher', ''))}
+                }
+                formatted_articles.append(formatted_article)
             
-            articles = response.get('articles', [])
-            logger.info(f"✅ '{query}' 검색 결과: {len(articles)}개 기사")
-            return articles
+            logger.info(f"✅ '{query}' 검색 결과: {len(formatted_articles)}개 기사")
+            return formatted_articles
             
         except Exception as e:
             logger.error(f"❌ 뉴스 검색 실패 '{query}': {str(e)}")
