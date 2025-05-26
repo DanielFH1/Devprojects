@@ -6,6 +6,7 @@
 """
 
 import os
+import sys
 import json
 import time
 import shutil
@@ -14,6 +15,11 @@ import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
+
+# 상위 디렉토리를 Python 경로에 추가
+current_dir = Path(__file__).parent
+parent_dir = current_dir.parent
+sys.path.insert(0, str(parent_dir))
 
 import uvicorn
 from fastapi import FastAPI, BackgroundTasks, HTTPException
@@ -32,7 +38,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # === 상수 및 설정 ===
-ASSETS_DIR = Path("assets")
+ASSETS_DIR = parent_dir / "assets"
 ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_DATA_FILE = ASSETS_DIR / "trend_summary_default.json"
@@ -45,7 +51,7 @@ if os.environ.get('RENDER') == 'true':
     logger.info(f"📂 Render.com 영구 저장소 설정: {PERSISTENT_DIR}")
 
 # Flutter 웹 앱 경로
-FLUTTER_WEB_DIR = Path("flutter_ui/web")
+FLUTTER_WEB_DIR = parent_dir / "flutter_ui/web"
 
 # === 뉴스 캐시 관리 클래스 ===
 class NewsCache:
@@ -342,7 +348,7 @@ app.add_middleware(
 )
 
 # === API 엔드포인트 ===
-@app.get("/status")
+@app.get("/api/status")
 async def get_status():
     """서버 상태 확인"""
     now = datetime.now()
@@ -374,7 +380,7 @@ async def get_status():
         }
     }
 
-@app.get("/news")
+@app.get("/api/trend-summary")
 async def get_news_data():
     """뉴스 데이터 조회"""
     try:
@@ -391,33 +397,77 @@ async def get_news_data():
                 threading.Thread(target=force_news_collection, daemon=True).start()
                 news_cache.initial_fetch_done = True
             
-            return {
-                "data": default_data,
-                "metadata": {
-                    "last_updated": datetime.now().isoformat(),
-                    "status": "using_default",
-                    "message": "뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요."
-                }
-            }
+            return default_data
         
         # 오늘 데이터가 아니면 새로 수집
         if not news_cache.is_today_data():
             logger.warning("⚠️ 캐시의 데이터가 오늘 것이 아닙니다. 새로 수집합니다.")
             threading.Thread(target=force_news_collection, daemon=True).start()
         
-        return {
-            "data": news_cache.latest_data,
-            "metadata": {
-                "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else datetime.now().isoformat(),
-                "status": "success"
-            }
-        }
+        return news_cache.latest_data
         
     except Exception as e:
         logger.error(f"❌ 뉴스 데이터 조회 실패: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/refresh")
+@app.get("/api/prediction")
+async def get_prediction_data():
+    """예측 데이터 조회"""
+    try:
+        # 캐시에 데이터가 없으면 업데이트
+        if not news_cache.latest_data:
+            update_news_cache()
+        
+        # 기본 예측 데이터 생성
+        if not news_cache.latest_data:
+            return {
+                "predictions": {
+                    "이재명": 35.0,
+                    "김문수": 30.0,
+                    "이준석": 25.0
+                },
+                "analysis": "데이터를 수집 중입니다. 잠시 후 다시 확인해주세요.",
+                "total_articles": 0,
+                "time_range": "데이터 수집 중"
+            }
+        
+        # 뉴스 데이터를 기반으로 예측 생성
+        candidate_stats = news_cache.latest_data.get("candidate_stats", {})
+        total_articles = news_cache.latest_data.get("total_articles", 0)
+        
+        # 간단한 예측 알고리즘 (감성 분석 기반)
+        predictions = {}
+        base_score = 30.0  # 기본 점수
+        
+        for candidate, stats in candidate_stats.items():
+            positive = stats.get("긍정", 0)
+            negative = stats.get("부정", 0)
+            neutral = stats.get("중립", 0)
+            total = positive + negative + neutral
+            
+            if total > 0:
+                sentiment_score = (positive - negative) / total * 10
+                predictions[candidate] = max(10.0, min(50.0, base_score + sentiment_score))
+            else:
+                predictions[candidate] = base_score
+        
+        # 정규화 (총합 100%)
+        total_pred = sum(predictions.values())
+        if total_pred > 0:
+            predictions = {k: (v / total_pred) * 100 for k, v in predictions.items()}
+        
+        return {
+            "predictions": predictions,
+            "analysis": news_cache.latest_data.get("trend_summary", "분석 중..."),
+            "total_articles": total_articles,
+            "time_range": news_cache.latest_data.get("time_range", "")
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 예측 데이터 조회 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/refresh")
 async def force_refresh(background_tasks: BackgroundTasks):
     """수동 새로고침"""
     # 레이트 리미팅
@@ -438,7 +488,7 @@ async def force_refresh(background_tasks: BackgroundTasks):
         "estimated_completion": (datetime.now() + timedelta(minutes=3)).isoformat()
     }
 
-@app.post("/update-cache")
+@app.post("/api/update-cache")
 async def force_update_cache():
     """캐시 강제 업데이트"""
     try:
@@ -462,7 +512,7 @@ async def force_update_cache():
         logger.error(f"❌ 캐시 강제 업데이트 실패: {str(e)}")
         return {"message": f"캐시 업데이트 중 오류: {str(e)}", "status": "error"}
 
-@app.post("/force-today-collection")
+@app.post("/api/force-today-collection")
 async def force_today_collection(background_tasks: BackgroundTasks):
     """오늘 데이터 강제 수집"""
     try:
@@ -480,6 +530,39 @@ async def force_today_collection(background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"❌ 오늘 데이터 강제 수집 요청 실패: {str(e)}")
         return {"message": f"오늘 데이터 수집 요청 중 오류: {str(e)}", "status": "error"}
+
+# 기존 엔드포인트들도 유지 (하위 호환성)
+@app.get("/status")
+async def get_status_legacy():
+    """서버 상태 확인 (레거시)"""
+    return await get_status()
+
+@app.get("/news")
+async def get_news_data_legacy():
+    """뉴스 데이터 조회 (레거시)"""
+    result = await get_news_data()
+    return {
+        "data": result,
+        "metadata": {
+            "last_updated": news_cache.last_update.isoformat() if news_cache.last_update else datetime.now().isoformat(),
+            "status": "success"
+        }
+    }
+
+@app.post("/refresh")
+async def force_refresh_legacy(background_tasks: BackgroundTasks):
+    """수동 새로고침 (레거시)"""
+    return await force_refresh(background_tasks)
+
+@app.post("/update-cache")
+async def force_update_cache_legacy():
+    """캐시 강제 업데이트 (레거시)"""
+    return await force_update_cache()
+
+@app.post("/force-today-collection")
+async def force_today_collection_legacy(background_tasks: BackgroundTasks):
+    """오늘 데이터 강제 수집 (레거시)"""
+    return await force_today_collection(background_tasks)
 
 # === 서버 시작 이벤트 ===
 @app.on_event("startup")
