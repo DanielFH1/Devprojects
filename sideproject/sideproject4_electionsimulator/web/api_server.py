@@ -285,17 +285,33 @@ def run_scheduler():
     news_cache.scheduler_running = True
     logger.info("🕒 스케줄러가 시작되었습니다.")
     
+    # 스케줄 상태 로깅
+    logger.info(f"📅 설정된 스케줄: {schedule.jobs}")
+    
     while True:
         try:
+            # 현재 시간과 다음 실행 시간 로깅
+            now = datetime.now()
+            next_run = schedule.next_run()
+            if next_run:
+                logger.info(f"⏰ 현재 시간: {now.strftime('%Y-%m-%d %H:%M:%S')}, 다음 실행: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
+            
             schedule.run_pending()
-            time.sleep(60)  # 1분마다 확인 (1초보다 효율적)
+            time.sleep(60)  # 1분마다 확인
         except Exception as e:
             logger.error(f"❌ 스케줄러 오류: {str(e)}")
             time.sleep(300)  # 오류 발생 시 5분 대기
 
 def run_news_pipeline():
     """스케줄러에서 호출될 함수"""
-    pipeline.run_daily_collection()
+    logger.info("🔔 run_news_pipeline 함수가 호출되었습니다.")
+    try:
+        pipeline.run_daily_collection()
+        # 수집 후 캐시 강제 업데이트
+        update_news_cache()
+        logger.info("✅ 뉴스 파이프라인 실행 완료 및 캐시 업데이트")
+    except Exception as e:
+        logger.error(f"❌ 뉴스 파이프라인 실행 실패: {str(e)}")
 
 # 초기 데이터 수집 함수 추가
 def run_initial_fetch():
@@ -324,8 +340,8 @@ def run_initial_fetch():
             logger.info(f"✅ 오늘 생성된 최신 파일 발견: {newest_file}")
         else:
             # 그래도 없으면 일반 업데이트 로직 사용
+            logger.warning("⚠️ 새로 생성된 파일을 찾을 수 없습니다. 일반 캐시 업데이트를 수행합니다.")
             update_news_cache()
-            logger.info("✅ 일반 캐시 업데이트 완료")
             
             # 상태 업데이트
             news_cache.initial_fetch_done = True
@@ -389,15 +405,74 @@ def run_initial_fetch():
     except Exception as e:
         logger.error(f"❌ 초기 뉴스 수집 실패: {str(e)}")
 
+# 강제 뉴스 수집 함수 추가
+def force_news_collection():
+    """강제로 뉴스 수집을 실행하는 함수"""
+    try:
+        logger.info("🔥 강제 뉴스 수집을 시작합니다...")
+        
+        # 기존 상태 초기화
+        news_cache.initial_fetch_done = False
+        news_cache.daily_task_last_run = None
+        
+        # 뉴스 수집 실행
+        pipeline.run_daily_collection()
+        
+        # 캐시 업데이트
+        update_news_cache()
+        
+        # 상태 업데이트
+        news_cache.initial_fetch_done = True
+        news_cache.daily_task_last_run = datetime.now()
+        
+        logger.info("✅ 강제 뉴스 수집 완료")
+        return True
+    except Exception as e:
+        logger.error(f"❌ 강제 뉴스 수집 실패: {str(e)}")
+        return False
+
 # --- API 엔드포인트 ---
 @app.get("/status")
 async def get_status():
     """서버 상태 확인 엔드포인트"""
+    # 현재 시간
+    now = datetime.now()
+    
+    # 오늘 날짜의 파일 확인
+    today = now.strftime("%Y-%m-%d")
+    today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
+    
+    # 다음 스케줄 실행 시간
+    next_run = schedule.next_run() if schedule.jobs else None
+    
+    # 캐시 상태
+    cache_status = news_cache.get_status()
+    
     return {
-        "status": "healthy" if news_cache.get_status()["is_healthy"] else "degraded",
-        "cache": news_cache.get_status(),
-        "server_time": datetime.now().isoformat(),
-        "uptime": str(datetime.now() - news_cache.last_update) if news_cache.last_update else None
+        "status": "healthy" if cache_status["is_healthy"] else "degraded",
+        "server_time": now.isoformat(),
+        "timezone": "UTC",
+        "cache": cache_status,
+        "scheduler": {
+            "running": news_cache.scheduler_running,
+            "jobs_count": len(schedule.jobs),
+            "jobs": [str(job) for job in schedule.jobs],
+            "next_run": next_run.isoformat() if next_run else None,
+            "time_until_next_run": str(next_run - now) if next_run else None
+        },
+        "files": {
+            "today_files_count": len(today_files),
+            "today_files": [f.name for f in today_files],
+            "assets_dir_exists": ASSETS_DIR.exists(),
+            "persistent_dir_exists": PERSISTENT_DIR.exists() if PERSISTENT_DIR else False
+        },
+        "environment": {
+            "render": os.environ.get('RENDER') == 'true',
+            "openai_api_key_set": bool(os.getenv('OPENAI_API_KEY')),
+            "assets_dir": str(ASSETS_DIR),
+            "persistent_dir": str(PERSISTENT_DIR) if PERSISTENT_DIR else None
+        },
+        "uptime": str(now - cache_status.get("last_update", now)) if cache_status.get("last_update") else None
     }
 
 @app.get("/news")
@@ -545,19 +620,27 @@ async def get_news_data():
 @app.post("/refresh")
 async def force_refresh(background_tasks: BackgroundTasks):
     """수동으로 뉴스 데이터 새로고침"""
-    # 마지막 새로고침으로부터 최소 1시간이 지났는지 확인 (남용 방지)
+    # 마지막 새로고침으로부터 최소 30분이 지났는지 확인 (남용 방지, 1시간에서 30분으로 단축)
     if news_cache.daily_task_last_run:
         time_since_last_run = datetime.now() - news_cache.daily_task_last_run
-        if time_since_last_run.total_seconds() < 3600:  # 1시간 = 3600초
+        if time_since_last_run.total_seconds() < 1800:  # 30분 = 1800초
             return {
-                "message": f"새로고침 요청이 너무 빈번합니다. {3600 - int(time_since_last_run.total_seconds())}초 후에 다시 시도해주세요.",
+                "message": f"새로고침 요청이 너무 빈번합니다. {1800 - int(time_since_last_run.total_seconds())}초 후에 다시 시도해주세요.",
                 "status": "rate_limited",
                 "last_run": news_cache.daily_task_last_run.isoformat(),
-                "next_available": (news_cache.daily_task_last_run + timedelta(hours=1)).isoformat()
+                "next_available": (news_cache.daily_task_last_run + timedelta(minutes=30)).isoformat()
             }
     
-    background_tasks.add_task(run_news_pipeline)
-    return {"message": "뉴스 데이터 새로고침이 시작되었습니다."}
+    logger.info("🔄 수동 새로고침 요청을 받았습니다.")
+    
+    # 백그라운드에서 강제 뉴스 수집 실행
+    background_tasks.add_task(force_news_collection)
+    
+    return {
+        "message": "뉴스 데이터 새로고침이 시작되었습니다. 약 2-3분 후에 새로운 데이터를 확인할 수 있습니다.",
+        "status": "started",
+        "estimated_completion": (datetime.now() + timedelta(minutes=3)).isoformat()
+    }
 
 # --- 서버 시작 이벤트 ---
 @app.on_event("startup")
@@ -568,26 +651,47 @@ async def startup_event():
         update_news_cache()  # 캐시 업데이트만 수행
         logger.info("✅ 초기 데이터 로드 완료")
         
-        # 항상 데이터 수집 수행하도록 수정 (Render.com 환경이 아니어도)
-        logger.info("🔄 초기 데이터 수집 시작...")
+        # 스케줄러 설정 - 명확하게 하나의 작업만 지정
+        schedule.clear()  # 기존 스케줄 초기화
+        schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)  # 매일 오전 6시에 뉴스 수집 및 분석
+        schedule.every(30).minutes.do(update_news_cache)  # 캐시 업데이트는 30분마다 유지
+        
+        logger.info("📅 스케줄 설정 완료:")
+        for job in schedule.jobs:
+            logger.info(f"  - {job}")
+        
+        # 스케줄러가 이미 실행 중인지 확인
+        if not news_cache.scheduler_running:
+            # 백그라운드 스레드에서 스케줄러 실행
+            scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+            scheduler_thread.start()
+            logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다. 매일 오전 6시에 데이터가 갱신됩니다.")
         
         # 오늘 날짜의 파일이 이미 있는지 확인
         today = datetime.now().strftime("%Y-%m-%d")
         today_files = list(ASSETS_DIR.glob(f"trend_summary_{today}_*.json"))
         
-        # 오늘 데이터가 없으면 항상 새로 수집
+        # 오늘 데이터가 없거나 기본 데이터만 있으면 강제로 새로 수집
         if not today_files:
-            logger.info("🔄 오늘 생성된 데이터가 없어 새로 수집합니다.")
+            logger.info("🔄 오늘 생성된 데이터가 없어 강제로 새로 수집합니다.")
+            # 백그라운드에서 강제 뉴스 수집 시작
             import threading
-            initial_fetch_thread = threading.Thread(target=run_initial_fetch, daemon=True)
-            initial_fetch_thread.start()
-            logger.info("🔄 백그라운드에서 초기 뉴스 수집을 시작합니다.")
+            force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
+            force_fetch_thread.start()
+            logger.info("🔄 백그라운드에서 강제 뉴스 수집을 시작합니다.")
         else:
             logger.info(f"✅ 오늘 생성된 데이터 파일이 이미 있습니다: {today_files[0].name}")
+            # 그래도 캐시에 데이터가 없으면 강제 수집
+            if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
+                logger.warning("⚠️ 캐시에 뉴스 목록이 없습니다. 강제 데이터 수집을 시작합니다.")
+                import threading
+                force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
+                force_fetch_thread.start()
+                logger.info("🔄 백그라운드에서 강제 뉴스 수집을 시작합니다.")
             
         # 캐시에 데이터가 있는지, news_list가 비어있는지 확인
         if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
-            logger.warning("⚠️ 캐시에 뉴스 목록이 없습니다. 데이터 수집이 필요합니다.")
+            logger.warning("⚠️ 캐시에 뉴스 목록이 없습니다. 기본 데이터를 로드합니다.")
             # 기본 데이터 파일에서 다시 로드 시도
             default_data_path = ASSETS_DIR / "trend_summary_default.json"
             if default_data_path.exists():
@@ -599,20 +703,28 @@ async def startup_event():
                             news_cache.update(default_data)
                 except Exception as e:
                     logger.error(f"❌ 기본 데이터 파일 로드 실패: {str(e)}")
+                    
+        # 서버 시작 후 5분 뒤에 한 번 더 강제 수집 시도 (보험용)
+        def delayed_force_collection():
+            time.sleep(300)  # 5분 대기
+            if not news_cache.latest_data or "news_list" not in news_cache.latest_data or not news_cache.latest_data["news_list"]:
+                logger.warning("⚠️ 5분 후에도 뉴스 데이터가 없습니다. 다시 강제 수집을 시도합니다.")
+                force_news_collection()
+        
+        delayed_thread = threading.Thread(target=delayed_force_collection, daemon=True)
+        delayed_thread.start()
+        logger.info("⏰ 5분 후 추가 데이터 수집 체크가 예약되었습니다.")
+        
     except Exception as e:
         logger.error(f"❌ 초기 데이터 로드 실패: {str(e)}")
-    
-    # 스케줄러 설정 - 명확하게 하나의 작업만 지정
-    schedule.clear()  # 기존 스케줄 초기화
-    schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)  # 매일 오전 6시에 뉴스 수집 및 분석
-    schedule.every(30).minutes.do(update_news_cache)  # 캐시 업데이트는 30분마다 유지
-    
-    # 스케줄러가 이미 실행 중인지 확인
-    if not news_cache.scheduler_running:
-        # 백그라운드 스레드에서 스케줄러 실행
-        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-        scheduler_thread.start()
-        logger.info("🕒 뉴스 수집 스케줄러가 백그라운드에서 시작되었습니다. 매일 오전 6시에 데이터가 갱신됩니다.")
+        # 실패해도 강제 수집 시도
+        try:
+            import threading
+            force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
+            force_fetch_thread.start()
+            logger.info("🔄 오류 발생으로 인한 백그라운드 강제 뉴스 수집을 시작합니다.")
+        except Exception as e2:
+            logger.error(f"❌ 강제 수집도 실패: {str(e2)}")
 
 # --- Flutter 웹 앱 제공 ---
 if not FLUTTER_BUILD_DIR.exists() or not (FLUTTER_BUILD_DIR / "index.html").exists():

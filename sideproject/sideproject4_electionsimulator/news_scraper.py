@@ -68,20 +68,46 @@ class NewsCollector:
     
     def collect_all_news(self) -> List[NewsArticle]:
         """모든 쿼리로 뉴스 수집 및 중복 제거"""
-        for query in self.search_queries:
-            articles = self.fetch_news(query)
-            for article in articles:
-                news = NewsArticle(
-                    title=article['title'],
-                    description=article['description'],
-                    url=article['url'],
-                    published_date=article.get('published date', ''),
-                    source=article.get('publisher', {}).get('title', ''),
-                    query=query
-                )
-                self.collected_articles[news.unique_id] = news
+        logger.info(f"🔍 {len(self.search_queries)}개의 검색어로 뉴스 수집을 시작합니다...")
+        logger.info(f"검색어 목록: {', '.join(self.search_queries)}")
         
-        return list(self.collected_articles.values())
+        total_collected = 0
+        for i, query in enumerate(self.search_queries, 1):
+            logger.info(f"🔍 [{i}/{len(self.search_queries)}] '{query}' 검색 중...")
+            try:
+                articles = self.fetch_news(query)
+                logger.info(f"✅ '{query}': {len(articles)}개 기사 수집")
+                
+                for article in articles:
+                    try:
+                        news = NewsArticle(
+                            title=article.get('title', '제목 없음'),
+                            description=article.get('description', '설명 없음'),
+                            url=article.get('url', ''),
+                            published_date=article.get('published date', ''),
+                            source=article.get('publisher', {}).get('title', '출처 불명') if isinstance(article.get('publisher'), dict) else str(article.get('publisher', '출처 불명')),
+                            query=query
+                        )
+                        
+                        # URL이 유효한 경우만 추가
+                        if news.url and news.url.startswith('http'):
+                            self.collected_articles[news.unique_id] = news
+                            total_collected += 1
+                        else:
+                            logger.warning(f"⚠️ 유효하지 않은 URL: {news.url}")
+                            
+                    except Exception as e:
+                        logger.error(f"❌ 기사 처리 중 오류: {str(e)}")
+                        continue
+                        
+            except Exception as e:
+                logger.error(f"❌ '{query}' 검색 중 오류: {str(e)}")
+                continue
+        
+        unique_articles = list(self.collected_articles.values())
+        logger.info(f"📊 수집 완료: 총 {total_collected}개 수집, 중복 제거 후 {len(unique_articles)}개")
+        
+        return unique_articles
 
 # 뉴스 중요도 정렬 전역 함수 - 클래스 밖으로 이동
 def rank_news_by_importance(news_data: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
@@ -525,28 +551,79 @@ class NewsPipeline:
             
         logger.info("⏳ 뉴스 수집 시작...")
         
-        # 뉴스 수집
-        articles = self.collector.collect_all_news()
-        logger.info(f"📰 {len(articles)}개의 뉴스 기사 수집 완료")
-        
-        # 기사 처리
-        processed_news = self.process_articles(articles)
-        self.temp_storage.extend(processed_news)
-        
-        # 트렌드 분석
-        current_time = datetime.datetime.now()
-        time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트"
-        trend_data = self.analyzer.analyze_trends(self.temp_storage, time_range)
-        
-        # 트렌드 요약 저장
-        self.save_trend_summary(trend_data)
-        
-        # 임시 저장소 초기화 및 시간 업데이트
-        self.temp_storage = []
-        self.last_trend_summary_time = current_time
-        self.last_run_date = today
-        
-        logger.info(f"✅ 오늘의 뉴스 수집 및 분석 완료: {today}")
+        try:
+            # 뉴스 수집
+            logger.info("📰 뉴스 기사 수집을 시작합니다...")
+            articles = self.collector.collect_all_news()
+            logger.info(f"📰 {len(articles)}개의 뉴스 기사 수집 완료")
+            
+            if not articles:
+                logger.warning("⚠️ 수집된 뉴스 기사가 없습니다. 기본 데이터를 사용합니다.")
+                # 기본 데이터 생성
+                current_time = datetime.datetime.now()
+                time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트"
+                trend_data = {
+                    "trend_summary": "현재 뉴스 데이터를 수집 중입니다. 잠시 후 다시 확인해주세요.",
+                    "candidate_stats": {
+                        "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                        "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                        "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                    },
+                    "total_articles": 0,
+                    "time_range": time_range,
+                    "news_list": []
+                }
+                self.save_trend_summary(trend_data)
+                self.last_run_date = today
+                return
+            
+            # 기사 처리
+            logger.info("🔄 뉴스 기사 분석을 시작합니다...")
+            processed_news = self.process_articles(articles)
+            logger.info(f"✅ {len(processed_news)}개 기사 분석 완료")
+            
+            self.temp_storage.extend(processed_news)
+            
+            # 트렌드 분석
+            logger.info("📊 트렌드 분석을 시작합니다...")
+            current_time = datetime.datetime.now()
+            time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트"
+            trend_data = self.analyzer.analyze_trends(self.temp_storage, time_range)
+            logger.info("✅ 트렌드 분석 완료")
+            
+            # 트렌드 요약 저장
+            logger.info("💾 트렌드 요약을 저장합니다...")
+            self.save_trend_summary(trend_data)
+            
+            # 임시 저장소 초기화 및 시간 업데이트
+            self.temp_storage = []
+            self.last_trend_summary_time = current_time
+            self.last_run_date = today
+            
+            logger.info(f"✅ 오늘의 뉴스 수집 및 분석 완료: {today}")
+            
+        except Exception as e:
+            logger.error(f"❌ 뉴스 수집 중 오류 발생: {str(e)}")
+            # 오류 발생 시에도 기본 데이터 저장
+            try:
+                current_time = datetime.datetime.now()
+                time_range = f"{current_time.strftime('%Y-%m-%d')} 업데이트 (오류 발생)"
+                trend_data = {
+                    "trend_summary": f"뉴스 수집 중 오류가 발생했습니다: {str(e)}",
+                    "candidate_stats": {
+                        "이재명": {"긍정": 0, "부정": 0, "중립": 0},
+                        "김문수": {"긍정": 0, "부정": 0, "중립": 0},
+                        "이준석": {"긍정": 0, "부정": 0, "중립": 0}
+                    },
+                    "total_articles": 0,
+                    "time_range": time_range,
+                    "news_list": []
+                }
+                self.save_trend_summary(trend_data)
+                self.last_run_date = today
+                logger.info("💾 오류 상황에서 기본 데이터를 저장했습니다.")
+            except Exception as e2:
+                logger.error(f"❌ 기본 데이터 저장도 실패: {str(e2)}")
 
 # 전역 파이프라인 인스턴스 생성
 pipeline = NewsPipeline()
