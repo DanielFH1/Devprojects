@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'news_page.dart';
-import 'prediction_page.dart';
+import 'main_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,29 +17,15 @@ void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.light;
-
-  void _toggleTheme() {
-    setState(() {
-      _themeMode =
-          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '대선 시뮬레이터',
+      title: '2025 대선 시뮬레이터',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF232A36)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF3498DB)),
         useMaterial3: true,
         fontFamily: 'Noto Sans KR',
         textTheme: const TextTheme(
@@ -48,47 +33,12 @@ class _MyAppState extends State<MyApp> {
           displayMedium: TextStyle(fontFamily: 'Inter'),
           displaySmall: TextStyle(fontFamily: 'Inter'),
         ),
-        // 반응형 설정 추가
         visualDensity: VisualDensity.adaptivePlatformDensity,
         appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF232A36),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Noto Sans KR',
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(fontFamily: 'Inter'),
-          displayMedium: TextStyle(fontFamily: 'Inter'),
-          displaySmall: TextStyle(fontFamily: 'Inter'),
-        ),
-        // 반응형 설정 추가
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
-      ),
-      themeMode: _themeMode,
-      home: NewsPage(
-        onToggleTheme: _toggleTheme,
-        themeMode: _themeMode,
-        onNavigatePrediction: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => PredictionPage(
-                    themeMode: _themeMode,
-                    onToggleTheme: _toggleTheme,
-                  ),
-            ),
-          );
-        },
-      ),
+      home: const MainPage(),
       builder: (context, child) {
-        // 전체 앱에 반응형 비율 설정 적용
         return MediaQuery(
-          // 시스템 설정된 텍스트 크기를 무시하고 앱 내부에서 일관된 크기 제공
           data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
           child: child!,
         );
