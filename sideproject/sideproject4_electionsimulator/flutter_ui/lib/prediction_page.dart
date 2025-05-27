@@ -27,7 +27,11 @@ class _PredictionPageState extends State<PredictionPage>
   late Animation<Offset> _slideAnimation;
 
   // === 설정 ===
-  static const String baseUrl = ''; // 현재 도메인 사용
+  static String get baseUrl {
+    // 상대 경로 사용 - 현재 도메인을 자동으로 사용
+    return ''; // 빈 문자열로 현재 도메인 사용
+  }
+
   static const Duration refreshInterval = Duration(minutes: 30);
   static const Duration animationDuration = Duration(milliseconds: 800);
 
