@@ -15,6 +15,7 @@ import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
+from contextlib import asynccontextmanager
 
 # 상위 디렉토리를 Python 경로에 추가
 current_dir = Path(__file__).parent
@@ -22,7 +23,7 @@ parent_dir = current_dir.parent
 sys.path.insert(0, str(parent_dir))
 
 import uvicorn
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,6 +71,26 @@ if os.environ.get('RENDER') == 'true':
 
 # Flutter 웹 앱 경로
 FLUTTER_WEB_DIR = parent_dir / "flutter_ui/web"
+logger.info(f"📂 Flutter 웹 디렉토리 경로: {FLUTTER_WEB_DIR}")
+logger.info(f"📂 Flutter 웹 디렉토리 존재 여부: {FLUTTER_WEB_DIR.exists()}")
+
+# 디렉토리 내용 확인
+if FLUTTER_WEB_DIR.exists():
+    files = list(FLUTTER_WEB_DIR.iterdir())
+    logger.info(f"📂 Flutter 웹 디렉토리 파일 목록: {[f.name for f in files]}")
+else:
+    logger.error(f"❌ Flutter 웹 디렉토리가 존재하지 않습니다: {FLUTTER_WEB_DIR}")
+    # 대안 경로들 확인
+    alt_paths = [
+        parent_dir / "flutter_ui/build/web",
+        Path("flutter_ui/web"),
+        Path("flutter_ui/build/web")
+    ]
+    for alt_path in alt_paths:
+        if alt_path.exists():
+            logger.info(f"✅ 대안 경로 발견: {alt_path}")
+            FLUTTER_WEB_DIR = alt_path
+            break
 
 # === 뉴스 캐시 관리 클래스 ===
 class NewsCache:
@@ -353,21 +374,133 @@ def run_scheduler() -> None:
             logger.error(f"❌ 스케줄러 오류: {str(e)}")
             time.sleep(300)  # 오류 발생 시 5분 대기
 
+# === 서버 시작 이벤트를 lifespan으로 변경 ===
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """서버 시작 시 초기화"""
+    try:
+        logger.info("🚀 서버 시작 - 초기화 중...")
+        
+        # 뉴스 수집 기능 상태 확인
+        if not NEWS_SCRAPER_AVAILABLE:
+            logger.warning("⚠️ 뉴스 수집 기능이 비활성화되었습니다. 기본 데이터만 제공됩니다.")
+            # 기본 데이터로 캐시 초기화
+            default_data = data_processor.create_default_data("뉴스 수집 기능이 일시적으로 비활성화되었습니다.")
+            news_cache.update(default_data)
+            yield
+            return
+        
+        # 캐시 초기 업데이트
+        update_news_cache()
+        logger.info("✅ 초기 캐시 업데이트 완료")
+        
+        # 스케줄러 설정
+        schedule.clear()
+        schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)
+        schedule.every(30).minutes.do(update_news_cache)
+        
+        logger.info("📅 스케줄 설정 완료:")
+        for job in schedule.jobs:
+            logger.info(f"  - {job}")
+        
+        # 스케줄러 시작
+        if not news_cache.scheduler_running:
+            scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
+            scheduler_thread.start()
+            logger.info("🕒 백그라운드 스케줄러 시작됨")
+        
+        # 오늘 데이터 확인 및 수집
+        today = datetime.now().strftime("%Y-%m-%d")
+        today_files = file_manager.get_today_files()
+        
+        logger.info(f"📅 오늘 날짜: {today}")
+        logger.info(f"📂 오늘 생성된 파일 개수: {len(today_files)}")
+        
+        # 오늘 데이터가 없거나 캐시가 오늘 것이 아니면 수집
+        if not today_files or not news_cache.is_today_data():
+            logger.info("🔄 오늘 데이터 수집 시작")
+            force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
+            force_fetch_thread.start()
+        
+        # 지연된 체크 (2분 후)
+        def delayed_check():
+            time.sleep(120)
+            if not news_cache.is_today_data():
+                logger.warning(f"⚠️ 2분 후에도 오늘({today}) 데이터가 없습니다. 재시도합니다.")
+                force_news_collection()
+        
+        threading.Thread(target=delayed_check, daemon=True).start()
+        logger.info("⏰ 2분 후 추가 데이터 수집 체크 예약됨")
+        
+        logger.info("✅ 서버 시작 이벤트 완료")
+        
+        yield  # 서버 실행
+        
+    except Exception as e:
+        logger.error(f"❌ 서버 시작 이벤트 실패: {str(e)}")
+        # 오류 발생 시에도 기본 데이터로 초기화
+        try:
+            default_data = data_processor.create_default_data(f"서버 초기화 중 오류 발생: {str(e)}")
+            news_cache.update(default_data)
+            logger.info("🔄 기본 데이터로 초기화 완료")
+        except Exception as e2:
+            logger.error(f"❌ 기본 데이터 초기화도 실패: {str(e2)}")
+        
+        yield  # 서버 실행
+
 # === FastAPI 앱 설정 ===
 app = FastAPI(
     title="대선 시뮬레이터 API",
     description="2025년 대선 뉴스 분석 및 예측 시뮬레이터",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
-# CORS 설정
+# CORS 설정 - 더 명시적으로 설정
+allowed_origins = [
+    "https://electionsimulatorwebservice.onrender.com",
+    "https://sideproject4-electionsimulator.onrender.com",  # 이전 도메인도 허용
+    "http://localhost:10000",
+    "http://127.0.0.1:10000",
+    "*"  # 모든 도메인 허용 (개발용)
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# CORS 헤더를 명시적으로 추가하는 미들웨어
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    
+    # 명시적인 CORS 헤더 추가
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    return response
+
+# OPTIONS 요청 처리
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    return JSONResponse(
+        content={"message": "OK"},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Expose-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 # === API 엔드포인트 ===
 @app.get("/api/status")
@@ -586,93 +719,84 @@ async def force_today_collection_legacy(background_tasks: BackgroundTasks):
     """오늘 데이터 강제 수집 (레거시)"""
     return await force_today_collection(background_tasks)
 
-# === 서버 시작 이벤트 ===
-@app.on_event("startup")
-async def startup_event():
-    """서버 시작 시 초기화"""
-    try:
-        logger.info("🚀 서버 시작 - 초기화 중...")
-        
-        # 뉴스 수집 기능 상태 확인
-        if not NEWS_SCRAPER_AVAILABLE:
-            logger.warning("⚠️ 뉴스 수집 기능이 비활성화되었습니다. 기본 데이터만 제공됩니다.")
-            # 기본 데이터로 캐시 초기화
-            default_data = data_processor.create_default_data("뉴스 수집 기능이 일시적으로 비활성화되었습니다.")
-            news_cache.update(default_data)
-            return
-        
-        # 캐시 초기 업데이트
-        update_news_cache()
-        logger.info("✅ 초기 캐시 업데이트 완료")
-        
-        # 스케줄러 설정
-        schedule.clear()
-        schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)
-        schedule.every(30).minutes.do(update_news_cache)
-        
-        logger.info("📅 스케줄 설정 완료:")
-        for job in schedule.jobs:
-            logger.info(f"  - {job}")
-        
-        # 스케줄러 시작
-        if not news_cache.scheduler_running:
-            scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-            scheduler_thread.start()
-            logger.info("🕒 백그라운드 스케줄러 시작됨")
-        
-        # 오늘 데이터 확인 및 수집
-        today = datetime.now().strftime("%Y-%m-%d")
-        today_files = file_manager.get_today_files()
-        
-        logger.info(f"📅 오늘 날짜: {today}")
-        logger.info(f"📂 오늘 생성된 파일 개수: {len(today_files)}")
-        
-        # 오늘 데이터가 없거나 캐시가 오늘 것이 아니면 수집
-        if not today_files or not news_cache.is_today_data():
-            logger.info("🔄 오늘 데이터 수집 시작")
-            force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
-            force_fetch_thread.start()
-        
-        # 지연된 체크 (2분 후)
-        def delayed_check():
-            time.sleep(120)
-            if not news_cache.is_today_data():
-                logger.warning(f"⚠️ 2분 후에도 오늘({today}) 데이터가 없습니다. 재시도합니다.")
-                force_news_collection()
-        
-        threading.Thread(target=delayed_check, daemon=True).start()
-        logger.info("⏰ 2분 후 추가 데이터 수집 체크 예약됨")
-        
-        logger.info("✅ 서버 시작 이벤트 완료")
-        
-    except Exception as e:
-        logger.error(f"❌ 서버 시작 이벤트 실패: {str(e)}")
-        # 오류 발생 시에도 기본 데이터로 초기화
-        try:
-            default_data = data_processor.create_default_data(f"서버 초기화 중 오류 발생: {str(e)}")
-            news_cache.update(default_data)
-            logger.info("🔄 기본 데이터로 초기화 완료")
-        except Exception as e2:
-            logger.error(f"❌ 기본 데이터 초기화도 실패: {str(e2)}")
-
 # === Flutter 웹 앱 서빙 ===
 if FLUTTER_WEB_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(FLUTTER_WEB_DIR)), name="static")
+    # 정적 파일 서빙
+    app.mount("/assets", StaticFiles(directory=str(FLUTTER_WEB_DIR / "assets")), name="assets")
+    app.mount("/canvaskit", StaticFiles(directory=str(FLUTTER_WEB_DIR / "canvaskit")), name="canvaskit")
+    app.mount("/icons", StaticFiles(directory=str(FLUTTER_WEB_DIR / "icons")), name="icons")
     
+    # 개별 파일들 서빙
+    @app.get("/main.dart.js")
+    async def serve_main_dart_js():
+        return FileResponse(str(FLUTTER_WEB_DIR / "main.dart.js"), media_type="application/javascript")
+    
+    @app.get("/flutter.js")
+    async def serve_flutter_js():
+        return FileResponse(str(FLUTTER_WEB_DIR / "flutter.js"), media_type="application/javascript")
+    
+    @app.get("/flutter_bootstrap.js")
+    async def serve_flutter_bootstrap_js():
+        return FileResponse(str(FLUTTER_WEB_DIR / "flutter_bootstrap.js"), media_type="application/javascript")
+    
+    @app.get("/flutter_service_worker.js")
+    async def serve_flutter_service_worker():
+        return FileResponse(str(FLUTTER_WEB_DIR / "flutter_service_worker.js"), media_type="application/javascript")
+    
+    @app.get("/manifest.json")
+    async def serve_manifest():
+        return FileResponse(str(FLUTTER_WEB_DIR / "manifest.json"), media_type="application/json")
+    
+    @app.get("/version.json")
+    async def serve_version():
+        return FileResponse(str(FLUTTER_WEB_DIR / "version.json"), media_type="application/json")
+    
+    @app.get("/favicon.png")
+    async def serve_favicon():
+        return FileResponse(str(FLUTTER_WEB_DIR / "favicon.png"), media_type="image/png")
+    
+    # 메인 페이지
     @app.get("/")
     async def root():
-        return FileResponse(str(FLUTTER_WEB_DIR / "index.html"))
+        return FileResponse(str(FLUTTER_WEB_DIR / "index.html"), media_type="text/html")
     
+    # 모든 다른 경로는 Flutter 앱으로 라우팅 (SPA 지원)
     @app.get("/{path:path}")
     async def serve_flutter_web(path: str):
+        # 파일이 실제로 존재하는지 확인
         file_path = FLUTTER_WEB_DIR / path
         if file_path.exists() and file_path.is_file():
-            return FileResponse(str(file_path))
-        return FileResponse(str(FLUTTER_WEB_DIR / "index.html"))
+            # 파일 확장자에 따른 MIME 타입 설정
+            if path.endswith('.js'):
+                return FileResponse(str(file_path), media_type="application/javascript")
+            elif path.endswith('.css'):
+                return FileResponse(str(file_path), media_type="text/css")
+            elif path.endswith('.html'):
+                return FileResponse(str(file_path), media_type="text/html")
+            elif path.endswith('.json'):
+                return FileResponse(str(file_path), media_type="application/json")
+            elif path.endswith('.png'):
+                return FileResponse(str(file_path), media_type="image/png")
+            elif path.endswith('.ico'):
+                return FileResponse(str(file_path), media_type="image/x-icon")
+            else:
+                return FileResponse(str(file_path))
+        
+        # 파일이 없으면 index.html로 리다이렉트 (SPA 라우팅)
+        return FileResponse(str(FLUTTER_WEB_DIR / "index.html"), media_type="text/html")
+    
+    logger.info("✅ Flutter 웹 앱 서빙 설정 완료")
 else:
+    logger.warning(f"⚠️ Flutter 웹 디렉토리를 찾을 수 없습니다: {FLUTTER_WEB_DIR}")
+    
     @app.get("/")
     async def fallback_root():
-        return {"message": "대선 시뮬레이터 API 서버가 실행 중입니다.", "status": "running"}
+        return {
+            "message": "대선 시뮬레이터 API 서버가 실행 중입니다.", 
+            "status": "running",
+            "flutter_web_dir": str(FLUTTER_WEB_DIR),
+            "flutter_web_exists": FLUTTER_WEB_DIR.exists()
+        }
 
 # === 서버 실행 ===
 if __name__ == "__main__":
