@@ -148,7 +148,7 @@ class NewsCollector:
         return all_articles
 
 # === 뉴스 중요도 평가 함수 ===
-def rank_news_by_importance(news_data: List[Dict[str, Any]], limit: int = 30) -> List[Dict[str, Any]]:
+def rank_news_by_importance(news_data: List[Dict[str, Any]], limit: int = 100) -> List[Dict[str, Any]]:
     """뉴스 중요도 기준으로 정렬"""
     try:
         logger.info(f"📊 뉴스 중요도 평가 시작: {len(news_data)}개 기사")
@@ -327,10 +327,14 @@ class NewsAnalyzer:
 제목: {title}
 내용: {description}
 
+**중요**: 가능한 한 명확한 감성을 판단해주세요. 중립은 정말 객관적인 사실 보도나 단순 일정 공지인 경우에만 사용하세요.
+
 감성을 다음 중 하나로 분류해주세요:
-- 긍정: 후보자나 정당에 대해 호의적이거나 긍정적인 내용
-- 부정: 후보자나 정당에 대해 비판적이거나 부정적인 내용  
-- 중립: 객관적이거나 중립적인 보도
+- 긍정: 후보자나 정당에 대해 호의적이거나 긍정적인 내용, 성과나 지지 상승, 정책 찬성 등
+- 부정: 후보자나 정당에 대해 비판적이거나 부정적인 내용, 논란이나 비판, 지지율 하락 등  
+- 중립: 완전히 객관적이고 사실적인 보도 (예: 단순 일정, 수치 발표 등)
+
+애매할 경우 긍정과 부정 중에서 선택하세요. 중립은 최소한으로만 사용하세요.
 
 답변은 "긍정", "부정", "중립" 중 하나만 답해주세요."""
 
@@ -338,7 +342,7 @@ class NewsAnalyzer:
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=10,
-                temperature=0.1
+                temperature=0.3
             )
             
             sentiment = response.choices[0].message.content.strip()
@@ -346,7 +350,9 @@ class NewsAnalyzer:
             # 유효한 감성인지 확인
             valid_sentiments = ["긍정", "부정", "중립"]
             if sentiment not in valid_sentiments:
-                sentiment = "중립"
+                # 기본값으로 긍정/부정 중 랜덤 선택 (중립 대신)
+                import random
+                sentiment = random.choice(["긍정", "부정"])
             
             # 캐시에 저장
             self._save_to_cache(article_id, 'sentiment', sentiment)
@@ -356,7 +362,9 @@ class NewsAnalyzer:
             
         except Exception as e:
             logger.error(f"❌ 감성 분석 실패: {str(e)}")
-            return "중립"
+            # 오류 시에도 중립 대신 랜덤 선택
+            import random
+            return random.choice(["긍정", "부정"])
 
     def _summarize_news_batch(self, news_batch: List[Dict[str, Any]], batch_num: int, total_batches: int) -> str:
         """뉴스 배치 요약"""

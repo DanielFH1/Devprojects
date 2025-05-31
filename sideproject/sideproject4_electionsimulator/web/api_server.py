@@ -241,7 +241,7 @@ class DataProcessor:
         # 뉴스 데이터가 있으면 중요도 기준으로 정렬
         if processed_data["news_list"]:
             try:
-                sorted_news = rank_news_by_importance(processed_data["news_list"], limit=30)
+                sorted_news = rank_news_by_importance(processed_data["news_list"], limit=100)
                 processed_data["news_list"] = sorted_news
                 logger.info(f"✅ 뉴스 데이터 중요도 정렬 완료: {len(sorted_news)}개")
             except Exception as e:

@@ -339,7 +339,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3498DB).withOpacity(0.3),
+            color: const Color(0xFF3498DB).withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -358,10 +358,10 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 8),
           Text(
-            '실시간 뉴스 분석을 통한 대선 트렌드 예측',
+            'AI 기반 실시간 트렌드 분석',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: 16),
@@ -399,7 +399,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3498DB).withOpacity(0.1),
+                    color: const Color(0xFF3498DB).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -463,7 +463,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF27AE60).withOpacity(0.1),
+                    color: const Color(0xFF27AE60).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -684,7 +684,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [color, color.withOpacity(0.8)],
+              colors: [color, color.withValues(alpha: 0.8)],
             ),
           ),
           child: Column(
@@ -705,7 +705,7 @@ class _MainPageState extends State<MainPage> with TickerProviderStateMixin {
                 subtitle,
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
             ],

@@ -318,7 +318,7 @@ class _PredictionPageState extends State<PredictionPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF9B59B6).withOpacity(0.3),
+            color: const Color(0xFF9B59B6).withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -340,7 +340,7 @@ class _PredictionPageState extends State<PredictionPage>
             '뉴스 감성 분석 기반 실시간 예측',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
           const SizedBox(height: 16),
@@ -388,7 +388,7 @@ class _PredictionPageState extends State<PredictionPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF9B59B6).withOpacity(0.1),
+                    color: const Color(0xFF9B59B6).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -511,7 +511,7 @@ class _PredictionPageState extends State<PredictionPage>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
                   gradient: LinearGradient(
-                    colors: [color, color.withOpacity(0.8)],
+                    colors: [color, color.withValues(alpha: 0.8)],
                   ),
                 ),
               ),
@@ -543,7 +543,7 @@ class _PredictionPageState extends State<PredictionPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF27AE60).withOpacity(0.1),
+                    color: const Color(0xFF27AE60).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
@@ -602,7 +602,7 @@ class _PredictionPageState extends State<PredictionPage>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -676,7 +676,7 @@ class _PredictionPageState extends State<PredictionPage>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE67E22).withOpacity(0.1),
+                    color: const Color(0xFFE67E22).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
