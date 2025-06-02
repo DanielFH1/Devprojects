@@ -52,13 +52,24 @@ if OPENAI_API_KEY:
         logger.error(f"❌ OpenAI 클라이언트 초기화 실패: {e}")
         openai_client = None
 
-# 검색 키워드 설정
+# 검색 키워드 설정 - 더 많은 키워드로 확장
 SEARCH_QUERIES = [
     "이재명 대선",
+    "이재명 후보",
     "김문수 대선", 
+    "김문수 후보",
     "이준석 대선",
+    "이준석 후보",
     "2025 대선",
-    "21대 대선"
+    "21대 대선",
+    "대선 후보",
+    "대선 여론조사",
+    "대선 지지율",
+    "대선 정책",
+    "대선 토론",
+    "더불어민주당 이재명",
+    "국민의힘 김문수",
+    "개혁신당 이준석"
 ]
 
 # === 데이터 클래스 ===
@@ -81,7 +92,7 @@ class NewsArticle:
 class NewsCollector:
     """뉴스 수집 담당 클래스 (GNews 사용)"""
     
-    def __init__(self, period: str = "12h", max_results: int = 20):
+    def __init__(self, period: str = "24h", max_results: int = 50):
         self.period = period
         self.max_results = max_results
         self.gnews = GNews(
@@ -95,7 +106,7 @@ class NewsCollector:
     def fetch_news(self, query: str) -> List[Dict[str, Any]]:
         """특정 키워드로 뉴스 검색"""
         try:
-            logger.info(f"🔍 뉴스 검색 중: '{query}'")
+            logger.info(f"뉴스 검색 중: '{query}' (최대 {self.max_results}개)")
             
             # GNews로 뉴스 검색
             articles = self.gnews.get_news(query)
@@ -120,13 +131,14 @@ class NewsCollector:
             return []
 
     def collect_all_news(self) -> List[NewsArticle]:
-        """모든 키워드로 뉴스 수집"""
+        """모든 키워드로 뉴스 수집 - 200개 목표"""
         all_articles = []
         seen_urls = set()
         
-        logger.info(f"📰 뉴스 수집 시작 - 키워드: {SEARCH_QUERIES}")
+        logger.info(f"📰 뉴스 수집 시작 - 키워드: {SEARCH_QUERIES} (목표: 200개)")
         
         for query in SEARCH_QUERIES:
+            # 각 키워드당 더 많은 기사 수집
             articles = self.fetch_news(query)
             
             for article in articles:
@@ -143,6 +155,14 @@ class NewsCollector:
                         query=query
                     )
                     all_articles.append(news_article)
+                    
+                    # 200개에 도달하면 중단
+                    if len(all_articles) >= 200:
+                        logger.info(f"🎯 목표 200개 기사 수집 완료!")
+                        break
+            
+            if len(all_articles) >= 200:
+                break
         
         logger.info(f"✅ 총 {len(all_articles)}개의 고유 기사 수집 완료")
         return all_articles
@@ -308,41 +328,44 @@ class NewsAnalyzer:
         max_time=30
     )
     def analyze_sentiment(self, article_id: str, title: str, description: str) -> str:
-        """감성 분석"""
+        """감성 분석 - 더 공격적으로 긍정/부정 판정"""
         # 캐시 확인
         cached_result = self._load_from_cache(article_id, 'sentiment')
         if cached_result:
             return cached_result
 
         if not openai_client:
-            return "중립"
+            # OpenAI가 없으면 제목 기반으로 간단한 룰 베이스 분석
+            return self._rule_based_sentiment(title, description)
 
         if not self._track_api_usage():
-            return "중립"
+            return self._rule_based_sentiment(title, description)
 
         try:
             prompt = f"""
-다음 뉴스 기사의 감성을 분석해주세요. 정치적 후보자나 정당에 대한 전반적인 톤을 기준으로 판단해주세요.
+다음 정치 뉴스 기사의 감성을 분석해주세요. 
 
 제목: {title}
 내용: {description}
 
-**중요**: 가능한 한 명확한 감성을 판단해주세요. 중립은 정말 객관적인 사실 보도나 단순 일정 공지인 경우에만 사용하세요.
+**중요 지침:**
+1. 정치 뉴스는 대부분 긍정적이거나 부정적인 성향을 가집니다.
+2. 중립은 정말 예외적인 경우에만 사용하세요 (단순 일정 공지, 수치 발표만 있는 경우).
+3. 후보자가 언급된 기사는 거의 항상 긍정 또는 부정 중 하나입니다.
+4. 애매하면 긍정 쪽으로 판단하세요.
 
-감성을 다음 중 하나로 분류해주세요:
-- 긍정: 후보자나 정당에 대해 호의적이거나 긍정적인 내용, 성과나 지지 상승, 정책 찬성 등
-- 부정: 후보자나 정당에 대해 비판적이거나 부정적인 내용, 논란이나 비판, 지지율 하락 등  
-- 중립: 완전히 객관적이고 사실적인 보도 (예: 단순 일정, 수치 발표 등)
+감성 분류 기준:
+- **긍정**: 지지 표명, 정책 발표, 성과 강조, 호의적 분석, 지지율 상승, 칭찬, 성공적 활동
+- **부정**: 비판, 논란, 스캔들, 지지율 하락, 실정, 문제점 지적, 갈등, 반대 의견
+- **중립**: 단순 일정 발표, 객관적 수치만 제시 (매우 제한적으로만 사용)
 
-애매할 경우 긍정과 부정 중에서 선택하세요. 중립은 최소한으로만 사용하세요.
-
-답변은 "긍정", "부정", "중립" 중 하나만 답해주세요."""
+답변은 "긍정", "부정", "중립" 중 하나만 답하세요."""
 
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=10,
-                temperature=0.3
+                temperature=0.1  # 더 일관된 결과를 위해 낮춤
             )
             
             sentiment = response.choices[0].message.content.strip()
@@ -350,9 +373,8 @@ class NewsAnalyzer:
             # 유효한 감성인지 확인
             valid_sentiments = ["긍정", "부정", "중립"]
             if sentiment not in valid_sentiments:
-                # 기본값으로 긍정/부정 중 랜덤 선택 (중립 대신)
-                import random
-                sentiment = random.choice(["긍정", "부정"])
+                # 기본값으로 룰 베이스 분석 사용
+                sentiment = self._rule_based_sentiment(title, description)
             
             # 캐시에 저장
             self._save_to_cache(article_id, 'sentiment', sentiment)
@@ -362,9 +384,40 @@ class NewsAnalyzer:
             
         except Exception as e:
             logger.error(f"❌ 감성 분석 실패: {str(e)}")
-            # 오류 시에도 중립 대신 랜덤 선택
-            import random
-            return random.choice(["긍정", "부정"])
+            return self._rule_based_sentiment(title, description)
+
+    def _rule_based_sentiment(self, title: str, description: str) -> str:
+        """룰 베이스 감성 분석 (OpenAI 사용 불가시 대안)"""
+        text = (title + " " + description).lower()
+        
+        # 긍정 키워드
+        positive_keywords = [
+            '성과', '성공', '지지', '상승', '개선', '발전', '호응', '환영', '찬성', '칭찬',
+            '좋', '우수', '훌륭', '뛰어난', '효과적', '성취', '달성', '승리', '선도',
+            '혁신', '개혁', '약속', '공약', '정책', '비전', '희망', '미래', '발표'
+        ]
+        
+        # 부정 키워드
+        negative_keywords = [
+            '비판', '논란', '문제', '하락', '실패', '우려', '걱정', '반대', '갈등', '충돌',
+            '스캔들', '의혹', '조사', '수사', '기소', '구속', '사퇴', '사과', '실정',
+            '부정', '거부', '반발', '항의', '고발', '고소', '폭로', '폭로'
+        ]
+        
+        positive_score = sum(1 for keyword in positive_keywords if keyword in text)
+        negative_score = sum(1 for keyword in negative_keywords if keyword in text)
+        
+        if positive_score > negative_score:
+            return "긍정"
+        elif negative_score > positive_score:
+            return "부정"
+        else:
+            # 동점이거나 둘 다 0이면 제목 길이와 내용으로 판단
+            if len(title) > 20 and any(candidate in text for candidate in ['이재명', '김문수', '이준석']):
+                # 후보자가 언급된 긴 제목은 보통 긍정 또는 부정
+                import random
+                return random.choice(["긍정", "부정"])
+            return "중립"
 
     def _summarize_news_batch(self, news_batch: List[Dict[str, Any]], batch_num: int, total_batches: int) -> str:
         """뉴스 배치 요약"""
@@ -487,12 +540,18 @@ class NewsPipeline:
     """뉴스 수집 및 분석 파이프라인"""
     
     def __init__(self):
-        self.collector = NewsCollector()
+        # 200개 기사 수집을 위해 더 큰 수치로 초기화
+        self.collector = NewsCollector(period="24h", max_results=50)  # 각 키워드당 50개씩
         self.analyzer = NewsAnalyzer()
         self.last_run_date = None
+        self.final_run_completed = False  # 최종 실행 완료 플래그
 
     def _should_run_today(self) -> bool:
-        """오늘 실행해야 하는지 확인"""
+        """오늘 실행해야 하는지 확인 - 최종 실행 후에는 더 이상 실행하지 않음"""
+        if self.final_run_completed:
+            logger.info("🚫 최종 실행이 이미 완료되었습니다. 더 이상 실행하지 않습니다.")
+            return False
+            
         today = datetime.now().date()
         
         # 강제 실행 모드 확인
@@ -583,54 +642,72 @@ class NewsPipeline:
             logger.error(f"❌ 트렌드 요약 저장 실패: {str(e)}")
 
     def run_daily_collection(self):
-        """일일 뉴스 수집 및 분석 실행"""
+        """최종 뉴스 수집 및 분석 실행 (한 번만)"""
         try:
+            if self.final_run_completed:
+                logger.info("🚫 최종 실행이 이미 완료되어 더 이상 실행하지 않습니다.")
+                return
+                
             start_time = datetime.now()
-            logger.info(f"🚀 일일 뉴스 수집 시작: {start_time}")
+            logger.info(f"🚀 최종 뉴스 수집 시작: {start_time} (목표: 200개 기사)")
             
             # 실행 여부 확인
             if not self._should_run_today():
                 return
             
-            # 1. 뉴스 수집
+            # 1. 뉴스 수집 (200개 목표)
             articles = self.collector.collect_all_news()
             if not articles:
                 logger.warning("⚠️ 수집된 뉴스가 없습니다.")
                 # 빈 데이터라도 오늘 날짜로 저장
                 empty_data = {
-                    "trend_summary": "오늘 수집된 뉴스가 없습니다.",
+                    "trend_summary": "수집된 뉴스가 없습니다.",
                     "candidate_stats": {
                         "이재명": {"긍정": 0, "부정": 0, "중립": 0},
                         "김문수": {"긍정": 0, "부정": 0, "중립": 0},
                         "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                     },
                     "total_articles": 0,
-                    "time_range": f"{start_time.strftime('%Y-%m-%d')} 수집",
+                    "time_range": f"{start_time.strftime('%Y-%m-%d')} 최종 수집",
                     "news_list": []
                 }
                 self.save_trend_summary(empty_data)
-                self.last_run_date = start_time.date()
+                self.final_run_completed = True
                 return
+            
+            logger.info(f"📊 수집 완료: {len(articles)}개 기사")
             
             # 2. 기사 처리 (요약 및 감성 분석)
             processed_articles = self.process_articles(articles)
             
             # 3. 트렌드 분석
-            time_range = f"{start_time.strftime('%Y-%m-%d')} 수집"
+            time_range = f"{start_time.strftime('%Y-%m-%d')} 최종 수집 (총 {len(processed_articles)}개 기사)"
             trend_data = self.analyzer.analyze_trends(processed_articles, time_range)
             
             # 4. 결과 저장
             self.save_trend_summary(trend_data)
             
-            # 5. 실행 상태 업데이트
+            # 5. 최종 실행 완료 표시
+            self.final_run_completed = True
             self.last_run_date = start_time.date()
             
             end_time = datetime.now()
             duration = end_time - start_time
-            logger.info(f"✅ 일일 뉴스 수집 완료: {duration.total_seconds():.1f}초 소요")
+            
+            # 감성 분석 결과 로깅
+            sentiment_counts = {"긍정": 0, "부정": 0, "중립": 0}
+            for article in processed_articles:
+                sentiment = article.get('sentiment', '중립')
+                sentiment_counts[sentiment] += 1
+            
+            logger.info(f"✅ 최종 뉴스 수집 완료!")
+            logger.info(f"📊 총 기사 수: {len(processed_articles)}개")
+            logger.info(f"📈 감성 분석 결과: 긍정 {sentiment_counts['긍정']}개, 부정 {sentiment_counts['부정']}개, 중립 {sentiment_counts['중립']}개")
+            logger.info(f"⏱️ 소요 시간: {duration.total_seconds():.1f}초")
+            logger.info(f"🏁 이것이 마지막 실행입니다. 더 이상 뉴스 수집을 하지 않습니다.")
             
         except Exception as e:
-            logger.error(f"❌ 일일 뉴스 수집 실패: {str(e)}")
+            logger.error(f"❌ 최종 뉴스 수집 실패: {str(e)}")
             # 오류 발생 시에도 오늘 날짜로 기본 데이터 저장
             try:
                 error_data = {
@@ -641,11 +718,11 @@ class NewsPipeline:
                         "이준석": {"긍정": 0, "부정": 0, "중립": 0}
                     },
                     "total_articles": 0,
-                    "time_range": f"{datetime.now().strftime('%Y-%m-%d')} 오류",
+                    "time_range": f"{datetime.now().strftime('%Y-%m-%d')} 오류 발생",
                     "news_list": []
                 }
                 self.save_trend_summary(error_data)
-                self.last_run_date = datetime.now().date()
+                self.final_run_completed = True
             except Exception as e2:
                 logger.error(f"❌ 오류 데이터 저장도 실패: {str(e2)}")
 

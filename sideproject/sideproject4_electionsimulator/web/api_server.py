@@ -10,8 +10,6 @@ import sys
 import json
 import time
 import shutil
-import schedule
-import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
@@ -103,9 +101,8 @@ class NewsCache:
         self.error_count: int = 0
         self.last_error: Optional[str] = None
         self.pipeline = NewsPipeline()
-        self.scheduler_running = False
-        self.daily_task_last_run = None
         self.initial_fetch_done = False
+        self.final_collection_completed = False  # 최종 수집 완료 플래그
 
     def update(self, data: Dict[str, Any]) -> None:
         """캐시 데이터 업데이트"""
@@ -130,9 +127,8 @@ class NewsCache:
             "error_count": self.error_count,
             "last_error": self.last_error,
             "is_healthy": self.error_count < 3 and self.last_update is not None,
-            "scheduler_running": self.scheduler_running,
-            "daily_task_last_run": self.daily_task_last_run.isoformat() if self.daily_task_last_run else None,
-            "initial_fetch_done": self.initial_fetch_done
+            "initial_fetch_done": self.initial_fetch_done,
+            "final_collection_completed": self.final_collection_completed
         }
 
     def is_today_data(self) -> bool:
@@ -297,20 +293,23 @@ def update_news_cache() -> None:
 
 # === 뉴스 수집 함수 ===
 def force_news_collection() -> bool:
-    """강제 뉴스 수집"""
+    """최종 뉴스 수집 (한 번만 실행)"""
     if not NEWS_SCRAPER_AVAILABLE:
         logger.warning("⚠️ 뉴스 수집 기능이 비활성화되어 있습니다.")
         return False
         
+    if news_cache.final_collection_completed:
+        logger.info("🚫 최종 뉴스 수집이 이미 완료되었습니다.")
+        return True
+        
     try:
-        logger.info("🔥 강제 뉴스 수집을 시작합니다...")
+        logger.info("🔥 최종 뉴스 수집을 시작합니다... (200개 기사 목표)")
         
         # 강제 실행 모드 활성화
         os.environ['FORCE_NEWS_COLLECTION'] = 'true'
         
         # 상태 초기화
         news_cache.initial_fetch_done = False
-        news_cache.daily_task_last_run = None
         
         # 뉴스 수집 실행
         news_cache.pipeline.run_daily_collection()
@@ -328,58 +327,23 @@ def force_news_collection() -> bool:
         
         # 상태 업데이트
         news_cache.initial_fetch_done = True
-        news_cache.daily_task_last_run = datetime.now()
+        news_cache.final_collection_completed = True
         
-        logger.info("✅ 강제 뉴스 수집 완료")
+        logger.info("✅ 최종 뉴스 수집 완료 - 더 이상 수집하지 않습니다.")
         return True
         
     except Exception as e:
-        logger.error(f"❌ 강제 뉴스 수집 실패: {str(e)}")
+        logger.error(f"❌ 최종 뉴스 수집 실패: {str(e)}")
         os.environ.pop('FORCE_NEWS_COLLECTION', None)
+        news_cache.final_collection_completed = True  # 실패해도 다시 시도하지 않음
         return False
-
-def run_scheduled_news_pipeline() -> None:
-    """예정된 뉴스 수집"""
-    try:
-        now = datetime.now()
-        
-        if news_cache.daily_task_last_run:
-            last_run_date = news_cache.daily_task_last_run.date()
-            if last_run_date == now.date():
-                logger.info(f"⏭️ 오늘({now.date()})은 이미 뉴스 수집을 실행했습니다.")
-                return
-        
-        logger.info(f"🔔 예정된 일일 뉴스 수집 시작: {now}")
-        force_news_collection()
-        logger.info(f"✅ 일일 뉴스 수집 완료: {now}")
-        
-    except Exception as e:
-        logger.error(f"❌ 예정된 뉴스 수집 실패: {str(e)}")
-
-def run_scheduler() -> None:
-    """백그라운드 스케줄러 실행"""
-    news_cache.scheduler_running = True
-    logger.info("🕒 스케줄러가 시작되었습니다.")
-    
-    while True:
-        try:
-            now = datetime.now()
-            next_run = schedule.next_run()
-            if next_run:
-                logger.info(f"⏰ 현재: {now.strftime('%Y-%m-%d %H:%M:%S')}, 다음 실행: {next_run.strftime('%Y-%m-%d %H:%M:%S')}")
-            
-            schedule.run_pending()
-            time.sleep(60)  # 1분마다 확인
-        except Exception as e:
-            logger.error(f"❌ 스케줄러 오류: {str(e)}")
-            time.sleep(300)  # 오류 발생 시 5분 대기
 
 # === 서버 시작 이벤트를 lifespan으로 변경 ===
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """서버 시작 시 초기화"""
+    """서버 시작 시 초기화 - 딱 한번만 뉴스 수집"""
     try:
-        logger.info("🚀 서버 시작 - 초기화 중...")
+        logger.info("🚀 서버 시작 - 최종 뉴스 수집 초기화 중...")
         
         # 뉴스 수집 기능 상태 확인
         if not NEWS_SCRAPER_AVAILABLE:
@@ -394,45 +358,35 @@ async def lifespan(app: FastAPI):
         update_news_cache()
         logger.info("✅ 초기 캐시 업데이트 완료")
         
-        # 스케줄러 설정
-        schedule.clear()
-        schedule.every().day.at("06:00").do(run_scheduled_news_pipeline)
-        schedule.every(30).minutes.do(update_news_cache)
+        # 스케줄러 관련 코드 모두 제거
+        # 대신 서버 시작시 딱 한번만 뉴스 수집 실행
         
-        logger.info("📅 스케줄 설정 완료:")
-        for job in schedule.jobs:
-            logger.info(f"  - {job}")
-        
-        # 스케줄러 시작
-        if not news_cache.scheduler_running:
-            scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-            scheduler_thread.start()
-            logger.info("🕒 백그라운드 스케줄러 시작됨")
-        
-        # 오늘 데이터 확인 및 수집
         today = datetime.now().strftime("%Y-%m-%d")
         today_files = file_manager.get_today_files()
         
         logger.info(f"📅 오늘 날짜: {today}")
         logger.info(f"📂 오늘 생성된 파일 개수: {len(today_files)}")
         
-        # 오늘 데이터가 없거나 캐시가 오늘 것이 아니면 수집
-        if not today_files or not news_cache.is_today_data():
-            logger.info("🔄 오늘 데이터 수집 시작")
-            force_fetch_thread = threading.Thread(target=force_news_collection, daemon=True)
-            force_fetch_thread.start()
-        
-        # 지연된 체크 (2분 후)
-        def delayed_check():
-            time.sleep(120)
-            if not news_cache.is_today_data():
-                logger.warning(f"⚠️ 2분 후에도 오늘({today}) 데이터가 없습니다. 재시도합니다.")
-                force_news_collection()
-        
-        threading.Thread(target=delayed_check, daemon=True).start()
-        logger.info("⏰ 2분 후 추가 데이터 수집 체크 예약됨")
+        # 최종 수집이 완료되지 않았다면 실행
+        if not news_cache.final_collection_completed:
+            logger.info("🔄 최종 뉴스 수집 시작 (200개 기사 목표)")
+            import threading
+            collection_thread = threading.Thread(target=force_news_collection, daemon=False)
+            collection_thread.start()
+            
+            # 수집이 완료될 때까지 최대 10분 대기
+            logger.info("⏳ 뉴스 수집 완료를 기다리는 중... (최대 10분)")
+            collection_thread.join(timeout=600)  # 10분 대기
+            
+            if collection_thread.is_alive():
+                logger.warning("⚠️ 뉴스 수집이 10분 내에 완료되지 않았습니다.")
+            else:
+                logger.info("✅ 뉴스 수집이 완료되었습니다.")
+        else:
+            logger.info("🏁 최종 수집이 이미 완료되었습니다.")
         
         logger.info("✅ 서버 시작 이벤트 완료")
+        logger.info("🚫 스케줄러는 비활성화되었습니다. 더 이상 자동 수집하지 않습니다.")
         
         yield  # 서버 실행
         
@@ -442,6 +396,7 @@ async def lifespan(app: FastAPI):
         try:
             default_data = data_processor.create_default_data(f"서버 초기화 중 오류 발생: {str(e)}")
             news_cache.update(default_data)
+            news_cache.final_collection_completed = True
             logger.info("🔄 기본 데이터로 초기화 완료")
         except Exception as e2:
             logger.error(f"❌ 기본 데이터 초기화도 실패: {str(e2)}")
@@ -509,7 +464,6 @@ async def get_status():
     now = datetime.now()
     today = now.strftime("%Y-%m-%d")
     today_files = file_manager.get_today_files()
-    next_run = schedule.next_run() if schedule.jobs else None
     cache_status = news_cache.get_status()
     
     return {
@@ -517,12 +471,8 @@ async def get_status():
         "server_time": now.isoformat(),
         "timezone": "UTC",
         "cache": cache_status,
-        "scheduler": {
-            "running": news_cache.scheduler_running,
-            "jobs_count": len(schedule.jobs),
-            "jobs": [str(job) for job in schedule.jobs],
-            "next_run": next_run.isoformat() if next_run else None,
-        },
+        "scheduler_status": "DISABLED - 최종 수집 모드",
+        "collection_mode": "ONE_TIME_FINAL",
         "files": {
             "today_files_count": len(today_files),
             "today_files": [f.name for f in today_files],
@@ -531,7 +481,8 @@ async def get_status():
         "data_status": {
             "has_today_data": news_cache.is_today_data(),
             "news_count": len(news_cache.latest_data.get("news_list", [])) if news_cache.latest_data else 0,
-            "time_range": news_cache.latest_data.get("time_range", "없음") if news_cache.latest_data else "없음"
+            "time_range": news_cache.latest_data.get("time_range", "없음") if news_cache.latest_data else "없음",
+            "final_collection_completed": news_cache.final_collection_completed
         }
     }
 
@@ -624,23 +575,21 @@ async def get_prediction_data():
 
 @app.post("/api/refresh")
 async def force_refresh(background_tasks: BackgroundTasks):
-    """수동 새로고침"""
-    # 레이트 리미팅
-    if news_cache.daily_task_last_run:
-        time_since_last_run = datetime.now() - news_cache.daily_task_last_run
-        if time_since_last_run.total_seconds() < 1800:  # 30분
-            return {
-                "message": f"새로고침 요청이 너무 빈번합니다. {1800 - int(time_since_last_run.total_seconds())}초 후에 다시 시도해주세요.",
-                "status": "rate_limited"
-            }
+    """수동 새로고침 - 최종 수집 완료 후에는 비활성화"""
+    if news_cache.final_collection_completed:
+        return {
+            "message": "최종 수집이 완료되어 더 이상 새로고침할 수 없습니다.",
+            "status": "disabled",
+            "reason": "final_collection_completed"
+        }
     
     logger.info("🔄 수동 새로고침 요청")
     background_tasks.add_task(force_news_collection)
     
     return {
-        "message": "뉴스 데이터 새로고침이 시작되었습니다.",
+        "message": "최종 뉴스 데이터 수집이 시작되었습니다.",
         "status": "started",
-        "estimated_completion": (datetime.now() + timedelta(minutes=3)).isoformat()
+        "estimated_completion": (datetime.now() + timedelta(minutes=5)).isoformat()
     }
 
 @app.post("/api/update-cache")
@@ -669,18 +618,26 @@ async def force_update_cache():
 
 @app.post("/api/force-today-collection")
 async def force_today_collection(background_tasks: BackgroundTasks):
-    """오늘 데이터 강제 수집"""
+    """오늘 데이터 강제 수집 - 최종 수집 완료 후에는 비활성화"""
+    if news_cache.final_collection_completed:
+        return {
+            "message": "최종 수집이 완료되어 더 이상 수집할 수 없습니다.",
+            "status": "disabled",
+            "reason": "final_collection_completed"
+        }
+        
     try:
         today = datetime.now().strftime("%Y-%m-%d")
-        logger.info(f"🔥 오늘({today}) 데이터 강제 수집 요청")
+        logger.info(f"🔥 오늘({today}) 최종 데이터 수집 요청")
         
         background_tasks.add_task(force_news_collection)
         
         return {
-            "message": f"오늘({today}) 뉴스 데이터 수집이 시작되었습니다.",
+            "message": f"오늘({today}) 최종 뉴스 데이터 수집이 시작되었습니다.",
             "status": "started",
             "target_date": today,
-            "estimated_completion": (datetime.now() + timedelta(minutes=5)).isoformat()
+            "estimated_completion": (datetime.now() + timedelta(minutes=5)).isoformat(),
+            "note": "이것이 마지막 수집입니다."
         }
     except Exception as e:
         logger.error(f"❌ 오늘 데이터 강제 수집 요청 실패: {str(e)}")
