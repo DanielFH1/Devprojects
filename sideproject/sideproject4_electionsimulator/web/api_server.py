@@ -10,6 +10,7 @@ import sys
 import json
 import time
 import shutil
+import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
@@ -370,7 +371,6 @@ async def lifespan(app: FastAPI):
         # 최종 수집이 완료되지 않았다면 실행
         if not news_cache.final_collection_completed:
             logger.info("🔄 최종 뉴스 수집 시작 (200개 기사 목표)")
-            import threading
             collection_thread = threading.Thread(target=force_news_collection, daemon=False)
             collection_thread.start()
             
