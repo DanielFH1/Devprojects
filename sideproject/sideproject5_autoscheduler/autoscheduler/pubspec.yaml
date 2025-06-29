@@ -78,6 +78,7 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   json_serializable: ^6.8.0
   build_runner: ^2.4.9
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -122,3 +123,27 @@ flutter:
 
   assets:
     - .env
+    - assets/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  web:
+    generate: true
+    image_path: "assets/app_icon.png"
+    background_color: "#2196F3"
+    theme_color: "#2196F3"
+  windows:
+    generate: true
+    image_path: "assets/app_icon.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/app_icon.png"
+  linux:
+    generate: true
+    image_path: "assets/app_icon.png"
+  image_path: "assets/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#2196F3"
+  adaptive_icon_foreground: "assets/app_icon.png"

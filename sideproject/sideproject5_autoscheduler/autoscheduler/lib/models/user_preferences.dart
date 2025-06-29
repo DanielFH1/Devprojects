@@ -17,6 +17,22 @@ enum ProductivityPeak {
   allDay,
 }
 
+/// ProductivityPeak 확장
+extension ProductivityPeakExtension on ProductivityPeak {
+  String get displayName {
+    switch (this) {
+      case ProductivityPeak.morning:
+        return '오전형';
+      case ProductivityPeak.afternoon:
+        return '오후형';
+      case ProductivityPeak.evening:
+        return '저녁형';
+      case ProductivityPeak.allDay:
+        return '하루종일';
+    }
+  }
+}
+
 @JsonSerializable()
 class UserPreferences {
   final int? id;
@@ -31,6 +47,14 @@ class UserPreferences {
   final String language; // 언어 설정
   final bool autoScheduling; // AI 자동 스케줄링 사용 여부
   final int availableHoursPerDay; // 하루 사용 가능 시간 (시간)
+
+  // 새로 추가된 작업 스타일 필드들
+  final String? additionalInfo; // AI가 알아야 하는 추가 정보
+  final int creativityPreference; // 1-10: 반복적(1) vs 창의적(10)
+  final int collaborationPreference; // 1-10: 개인적(1) vs 협업적(10)
+  final int taskLengthPreference; // 1-10: 짧은 작업(1) vs 긴 작업(10)
+  final bool isDarkMode; // darkMode와 동일하지만 더 명확한 이름
+
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -47,6 +71,11 @@ class UserPreferences {
     this.language = 'ko',
     this.autoScheduling = true,
     this.availableHoursPerDay = 8,
+    this.additionalInfo,
+    this.creativityPreference = 5,
+    this.collaborationPreference = 5,
+    this.taskLengthPreference = 5,
+    this.isDarkMode = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -102,6 +131,11 @@ class UserPreferences {
     String? language,
     bool? autoScheduling,
     int? availableHoursPerDay,
+    String? additionalInfo,
+    int? creativityPreference,
+    int? collaborationPreference,
+    int? taskLengthPreference,
+    bool? isDarkMode,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -119,6 +153,12 @@ class UserPreferences {
       language: language ?? this.language,
       autoScheduling: autoScheduling ?? this.autoScheduling,
       availableHoursPerDay: availableHoursPerDay ?? this.availableHoursPerDay,
+      additionalInfo: additionalInfo ?? this.additionalInfo,
+      creativityPreference: creativityPreference ?? this.creativityPreference,
+      collaborationPreference:
+          collaborationPreference ?? this.collaborationPreference,
+      taskLengthPreference: taskLengthPreference ?? this.taskLengthPreference,
+      isDarkMode: isDarkMode ?? this.isDarkMode,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

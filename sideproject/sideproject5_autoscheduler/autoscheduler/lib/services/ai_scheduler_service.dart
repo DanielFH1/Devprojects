@@ -14,7 +14,7 @@ class AISchedulerService {
 
   Dio? _dio;
   String _apiKey = '';
-  String _model = 'gpt-4o-mini';
+  String _model = 'o3-mini';
   int _maxTokens = 1500;
   double _temperature = 0.3;
 
@@ -33,7 +33,7 @@ class AISchedulerService {
       }
 
       _apiKey = dotenv.env['OPENAI_API_KEY'] ?? '';
-      _model = dotenv.env['OPENAI_MODEL'] ?? 'gpt-4o-mini';
+      _model = dotenv.env['OPENAI_MODEL'] ?? 'o3-mini';
       _maxTokens = int.parse(dotenv.env['OPENAI_MAX_TOKENS'] ?? '1500');
       _temperature = double.parse(dotenv.env['OPENAI_TEMPERATURE'] ?? '0.3');
 
@@ -117,14 +117,36 @@ class AISchedulerService {
 
   /// AI 프롬프트 생성
   String _generateSchedulingPrompt(SchedulingRequest request) {
-    return '''
-당신은 전문적인 생산성 컨설턴트입니다. Eisenhower Matrix를 기반으로 작업들을 최적으로 스케줄링해주세요.
+    final prefs = request.userPreferences;
+    String additionalInfoSection = '';
 
-# 사용자 정보
-- 근무시간: ${request.userPreferences.workingHoursStart} - ${request.userPreferences.workingHoursEnd}
-- 생산성 피크: ${request.userPreferences.productivityPeakDisplayName}
-- 하루 사용 가능 시간: ${request.userPreferences.availableHoursPerDay}시간
-- 하루 최대 작업 수: ${request.userPreferences.dailyTaskLimit}개
+    if (prefs.additionalInfo?.isNotEmpty == true) {
+      additionalInfoSection = '''
+
+# 사용자 추가 정보
+${prefs.additionalInfo}
+''';
+    }
+
+    String workStyleSection = '''
+
+# 사용자 작업 스타일 분석
+- 창의성 선호도: ${prefs.creativityPreference}/10 (1=반복적 작업 선호, 10=창의적 작업 선호)
+- 협업 선호도: ${prefs.collaborationPreference}/10 (1=개인 작업 선호, 10=협업 선호)
+- 작업 길이 선호도: ${prefs.taskLengthPreference}/10 (1=짧은 작업 선호, 10=긴 작업 선호)
+''';
+
+    return '''
+당신은 전문적인 생산성 컨설턴트이자 시간 관리 전문가입니다. 
+Eisenhower Matrix, GTD(Getting Things Done), Pomodoro 기법, Time Blocking 등 다양한 시간 관리 기법을 활용하여 
+사용자의 개인적인 스타일에 가장 적합한 최적화된 스케줄을 생성해주세요.
+
+# 사용자 기본 정보
+- 이름: ${prefs.userName}
+- 근무시간: ${prefs.workingHoursStart} - ${prefs.workingHoursEnd}
+- 생산성 피크: ${prefs.productivityPeakDisplayName}
+- 하루 사용 가능 시간: ${prefs.availableHoursPerDay}시간
+- 하루 최대 작업 수: ${prefs.dailyTaskLimit}개$workStyleSection$additionalInfoSection
 
 # 스케줄링할 작업들
 ${_formatTasksForPrompt(request.tasks)}
@@ -133,17 +155,29 @@ ${_formatTasksForPrompt(request.tasks)}
 시작일: ${request.startDate.toIso8601String().split('T')[0]}
 기간: ${request.daysToSchedule}일간
 
-# 요구사항
-1. Eisenhower Matrix 사분면에 따라 우선순위 설정:
-   - 사분면 1 (긴급하고 중요): 즉시 스케줄링, 최우선
-   - 사분면 2 (중요하지만 긴급하지 않음): 계획적 스케줄링
-   - 사분면 3 (긴급하지만 중요하지 않음): 빠른 시간에 처리
-   - 사분면 4 (긴급하지도 중요하지도 않음): 여유 시간에 배치
+# 고급 스케줄링 요구사항
 
-2. 마감일이 가까운 작업일수록 우선순위 높게 설정
-3. 사용자의 생산성 피크 시간대에 중요한 작업 배치
-4. 예상 소요시간을 고려하여 현실적인 스케줄링
-5. 하루 작업량이 과도하지 않도록 분산
+## 1. Eisenhower Matrix 기반 우선순위 분석
+- 사분면 1 (긴급하고 중요): 즉시 처리, 생산성 피크 시간 활용
+- 사분면 2 (중요하지만 긴급하지 않음): 계획적 배치, 장기적 성과 중시
+- 사분면 3 (긴급하지만 중요하지 않음): 효율적 시간에 빠르게 처리
+- 사분면 4 (낮은 우선순위): 여유 시간 또는 에너지가 낮을 때 배치
+
+## 2. 개인화된 시간 관리 적용
+- 사용자의 창의성 선호도에 따라 창의적/반복적 작업 배치 최적화
+- 협업 선호도에 따라 팀워크가 필요한 작업의 시간대 조정
+- 작업 길이 선호도에 따라 짧은/긴 작업의 배치 전략 결정
+
+## 3. 생산성 최적화 전략
+- 에너지 레벨에 맞는 작업 배치 (어려운 작업은 피크 시간에)
+- 컨텍스트 스위칭 최소화 (유사한 작업들을 그룹화)
+- 적절한 휴식 시간 확보 (Pomodoro 기법 활용)
+- 마감일 압박과 작업 복잡도 균형 맞추기
+
+## 4. 현실적 스케줄링
+- 예상 소요시간의 120% 정도로 여유 시간 확보
+- 하루 작업량이 과도하지 않도록 분산
+- 긴급 상황 대비 버퍼 타임 포함
 
 다음 JSON 형식으로 응답해주세요:
 {
@@ -156,18 +190,18 @@ ${_formatTasksForPrompt(request.tasks)}
           "end_time": "HH:MM",
           "task_id": 숫자,
           "priority_quadrant": 1-4,
-          "reasoning": "스케줄링 이유"
+          "reasoning": "이 시간에 배치한 상세한 이유 (사용자 스타일 반영)"
         }
       ]
     }
   ],
   "general_recommendations": [
-    "생산성 향상을 위한 일반적인 조언들"
+    "사용자의 작업 스타일을 고려한 개인화된 생산성 향상 조언들"
   ],
   "confidence": 0.0-1.0
 }
 
-한국어로 reasoning과 recommendations를 작성해주세요.
+reasoning과 recommendations는 반드시 한국어로 작성하고, 사용자의 개인적 스타일과 선호도를 충분히 반영해주세요.
 ''';
   }
 

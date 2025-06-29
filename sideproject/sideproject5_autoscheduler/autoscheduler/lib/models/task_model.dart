@@ -17,6 +17,22 @@ enum PriorityQuadrant {
   notUrgentNotImportant, // 사분면 4: 긴급하지도 중요하지도 않음 (제거하거나 나중에 할 일)
 }
 
+/// PriorityQuadrant 확장
+extension PriorityQuadrantExtension on PriorityQuadrant {
+  String get description {
+    switch (this) {
+      case PriorityQuadrant.urgentImportant:
+        return '긴급하고 중요함';
+      case PriorityQuadrant.notUrgentImportant:
+        return '중요함';
+      case PriorityQuadrant.urgentNotImportant:
+        return '긴급함';
+      case PriorityQuadrant.notUrgentNotImportant:
+        return '일반';
+    }
+  }
+}
+
 /// 작업 카테고리
 enum TaskCategory {
   @JsonValue('work')
@@ -39,6 +55,28 @@ enum TaskCategory {
 
   @JsonValue('other')
   other,
+}
+
+/// TaskCategory 확장
+extension TaskCategoryExtension on TaskCategory {
+  String get displayName {
+    switch (this) {
+      case TaskCategory.work:
+        return '업무';
+      case TaskCategory.personal:
+        return '개인';
+      case TaskCategory.health:
+        return '건강';
+      case TaskCategory.education:
+        return '교육';
+      case TaskCategory.family:
+        return '가족';
+      case TaskCategory.finance:
+        return '재정';
+      case TaskCategory.other:
+        return '기타';
+    }
+  }
 }
 
 @JsonSerializable()
@@ -123,6 +161,10 @@ class Task {
 
   /// 작업 완료 여부
   bool get isCompleted => completionPercentage >= 100;
+
+  /// 실제 우선순위 사분면 (null이면 계산해서 반환)
+  PriorityQuadrant get actualPriorityQuadrant =>
+      priorityQuadrant ?? calculatePriorityQuadrant();
 
   /// 마감일까지 남은 시간 (분 단위)
   int? get minutesToDeadline {

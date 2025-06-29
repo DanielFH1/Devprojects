@@ -26,6 +26,12 @@ UserPreferences _$UserPreferencesFromJson(
   language: json['language'] as String? ?? 'ko',
   autoScheduling: json['autoScheduling'] as bool? ?? true,
   availableHoursPerDay: (json['availableHoursPerDay'] as num?)?.toInt() ?? 8,
+  additionalInfo: json['additionalInfo'] as String?,
+  creativityPreference: (json['creativityPreference'] as num?)?.toInt() ?? 5,
+  collaborationPreference:
+      (json['collaborationPreference'] as num?)?.toInt() ?? 5,
+  taskLengthPreference: (json['taskLengthPreference'] as num?)?.toInt() ?? 5,
+  isDarkMode: json['isDarkMode'] as bool? ?? false,
   createdAt: DateTime.parse(json['createdAt'] as String),
   updatedAt: DateTime.parse(json['updatedAt'] as String),
 );
@@ -44,6 +50,11 @@ Map<String, dynamic> _$UserPreferencesToJson(UserPreferences instance) =>
       'language': instance.language,
       'autoScheduling': instance.autoScheduling,
       'availableHoursPerDay': instance.availableHoursPerDay,
+      'additionalInfo': instance.additionalInfo,
+      'creativityPreference': instance.creativityPreference,
+      'collaborationPreference': instance.collaborationPreference,
+      'taskLengthPreference': instance.taskLengthPreference,
+      'isDarkMode': instance.isDarkMode,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };

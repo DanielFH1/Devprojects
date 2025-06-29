@@ -167,8 +167,38 @@ class DatabaseService {
 
   /// 작업 생성
   Future<int> insertTask(Task task) async {
-    final db = await database;
-    return await db.insert('tasks', _taskToMap(task));
+    if (kIsWeb) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final tasksJson = prefs.getString('tasks') ?? '[]';
+        final List<dynamic> tasksList = json.decode(tasksJson);
+
+        // 새 ID 생성 (기존 최대 ID + 1)
+        int newId = 1;
+        if (tasksList.isNotEmpty) {
+          final maxId = tasksList
+              .map((t) => t['id'] as int? ?? 0)
+              .reduce((a, b) => a > b ? a : b);
+          newId = maxId + 1;
+        }
+
+        final taskWithId = task.copyWith(id: newId);
+        tasksList.add(taskWithId.toJson());
+        await prefs.setString('tasks', json.encode(tasksList));
+        return newId;
+      } catch (e) {
+        debugPrint('웹에서 작업 저장 실패: $e');
+        return -1;
+      }
+    }
+
+    try {
+      final db = await database;
+      return await db.insert('tasks', _taskToMap(task));
+    } catch (e) {
+      debugPrint('데이터베이스 삽입 실패: $e');
+      return -1;
+    }
   }
 
   /// 모든 작업 조회
@@ -185,9 +215,14 @@ class DatabaseService {
       }
     }
 
-    final db = await database;
-    final maps = await db.query('tasks', orderBy: 'created_at DESC');
-    return maps.map((map) => _mapToTask(map)).toList();
+    try {
+      final db = await database;
+      final maps = await db.query('tasks', orderBy: 'created_at DESC');
+      return maps.map((map) => _mapToTask(map)).toList();
+    } catch (e) {
+      debugPrint('데이터베이스 조회 실패: $e');
+      return [];
+    }
   }
 
   /// 특정 날짜의 작업 조회
@@ -254,22 +289,56 @@ class DatabaseService {
       try {
         final prefs = await SharedPreferences.getInstance();
         final prefsJson = prefs.getString('user_preferences');
-        if (prefsJson == null) return null;
-        return UserPreferences.fromJson(json.decode(prefsJson));
+        if (prefsJson != null) {
+          return UserPreferences.fromJson(json.decode(prefsJson));
+        }
+
+        // 웹에서 기본 사용자 설정 생성
+        final defaultPrefs = UserPreferences(
+          id: 1,
+          userName: '사용자',
+          workingHoursStart: '09:00',
+          workingHoursEnd: '18:00',
+          productivityPeak: ProductivityPeak.morning,
+          dailyTaskLimit: 8,
+          isDarkMode: false,
+          notificationsEnabled: true,
+          reminderMinutesBefore: 15,
+          language: 'ko',
+          autoScheduling: true,
+          availableHoursPerDay: 8,
+          creativityPreference: 5,
+          collaborationPreference: 5,
+          taskLengthPreference: 5,
+          additionalInfo: null,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        await prefs.setString(
+          'user_preferences',
+          json.encode(defaultPrefs.toJson()),
+        );
+        return defaultPrefs;
       } catch (e) {
         debugPrint('웹에서 사용자 설정 조회 실패: $e');
         return null;
       }
     }
 
-    final db = await database;
-    final maps = await db.query(
-      'user_preferences',
-      where: 'id = ?',
-      whereArgs: [1],
-    );
-    if (maps.isEmpty) return null;
-    return _mapToUserPreferences(maps.first);
+    try {
+      final db = await database;
+      final maps = await db.query(
+        'user_preferences',
+        where: 'id = ?',
+        whereArgs: [1],
+      );
+      if (maps.isEmpty) return null;
+      return _mapToUserPreferences(maps.first);
+    } catch (e) {
+      debugPrint('데이터베이스에서 사용자 설정 조회 실패: $e');
+      return null;
+    }
   }
 
   /// 사용자 설정 업데이트
