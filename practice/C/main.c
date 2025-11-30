@@ -1,15 +1,14 @@
 #include <stdio.h>
 
 int main(){
-    int numbers[5] = {0};
+    int n;
+    int a[50];
+    printf("How many numbers? ");
+    scanf("%d",&n);
 
-    for(int i=0;i<5;i++){
-        printf("Enter a score: ");
-        scanf("%d", &numbers[i]);
-    }
+    printf("Please type %n numbers: ",n);
+    for(int i=0; i<n;i++) scanf("%d ", &a[i]);
 
-    for(int i=0;i<5;i++){
-        printf("%d ",numbers[i]);
-    }
-    return 0; 
+    return 0;
+
 }
