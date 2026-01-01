@@ -1,14 +1,9 @@
 #include <stdio.h>
 
 int main(){
-    int n;
-    int a[50];
-    printf("How many numbers? ");
-    scanf("%d",&n);
+    int arr[3][2] = {{1,2},{5,6},{9,10}};
+    int (*ptr)[2] = arr; // int 4개 묶음으로 보는 ptr
 
-    printf("Please type %n numbers: ",n);
-    for(int i=0; i<n;i++) scanf("%d ", &a[i]);
-
+    printf("%d %d",*(*(ptr+1)+3), sizeof(ptr+1));
     return 0;
-
-}
+}   
